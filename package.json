@@ -1,0 +1,26 @@
+{
+  "name": "base-yield-lens",
+  "version": "0.1.0",
+  "description": "Read-only CLI/library to fetch and summarize Base DeFi pool/lending snapshots",
+  "type": "module",
+  "bin": {
+    "base-yield-lens": "./dist/cli.js"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "cli": "tsx src/cli.ts"
+  },
+  "keywords": ["base", "ethereum", "defi", "typescript"],
+  "license": "MIT",
+  "engines": {
+    "node": ">=18"
+  },
+  "devDependencies": {
+    "@types/node": "^20.17.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0",
+    "vitest": "^2.1.0"
+  }
+}
