@@ -1,5 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
-import { formatSummary, summarizeYields } from "../src/lib/fetch.js";
+import {
+  fetchJson,
+  formatSummary,
+  summarizeYields,
+} from "../src/lib/fetch.js";
 
 describe("summarizeYields", () => {
   it("builds a Base summary from mocked pool/lending JSON", async () => {
@@ -48,5 +52,48 @@ describe("summarizeYields", () => {
     const text = formatSummary(summary);
     expect(text).toContain("WETH/USDC");
     expect(text).toContain("aave-v3");
+  });
+
+  it("returns empty pools/lending when upstream fetch fails (offline CLI)", async () => {
+    const fetchImpl = vi.fn(async () => {
+      throw new Error("network down");
+    }) as unknown as typeof fetch;
+
+    const summary = await summarizeYields({
+      baseUrl: "https://mock.test/base-defi",
+      fetchImpl,
+    });
+
+    expect(summary.chain).toBe("base");
+    expect(summary.pools).toEqual([]);
+    expect(summary.lending).toEqual([]);
+    expect(summary.fetchedAt).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+    expect(formatSummary(summary)).toContain("Pools: 0");
+  });
+
+  it("returns empty arrays when endpoints respond non-OK", async () => {
+    const fetchImpl = vi.fn(
+      async () => new Response("boom", { status: 503 }),
+    ) as unknown as typeof fetch;
+
+    const summary = await summarizeYields({
+      baseUrl: "https://mock.test/base-defi",
+      fetchImpl,
+    });
+
+    expect(summary.pools).toEqual([]);
+    expect(summary.lending).toEqual([]);
+  });
+});
+
+describe("fetchJson", () => {
+  it("throws a clear HTTP error for non-OK responses", async () => {
+    const fetchImpl = vi.fn(
+      async () => new Response("nope", { status: 404 }),
+    ) as unknown as typeof fetch;
+
+    await expect(
+      fetchJson("https://mock.test/missing", fetchImpl),
+    ).rejects.toThrow("HTTP 404 for https://mock.test/missing");
   });
 });
