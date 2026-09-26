@@ -6,7 +6,7 @@ Read-only CLI/library that fetches and summarizes **Base** DeFi pool and lending
 
 ## Stack
 - TypeScript + pnpm
-- `src/cli.ts` — CLI entry
+- `src/cli.ts` — CLI entry (`pnpm cli` via tsx; built bin is `base-yield-lens` → `dist/cli.js`)
 - `src/lib/fetch.ts` — fetch + summarize helpers
 
 ## Run
@@ -14,10 +14,15 @@ Read-only CLI/library that fetches and summarizes **Base** DeFi pool and lending
 pnpm install
 pnpm test
 pnpm typecheck
+pnpm build
 pnpm cli
 ```
 
+After `pnpm build`, the package bin is available as `base-yield-lens` (points at `dist/cli.js`).
+
 Optional: `YIELD_LENS_BASE_URL=https://your-api.example/base-defi`
+
+When the API is unreachable or returns non-OK, the CLI still prints a summary with **empty** pools/lending arrays (offline-friendly fallback) plus the disclaimer about placeholder APIs.
 
 ## Scope
 - Base chain focus

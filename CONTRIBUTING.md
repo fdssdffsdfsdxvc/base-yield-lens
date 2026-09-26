@@ -14,4 +14,5 @@ This repository may be maintained by an automated caretaker agent for Roman's Ba
 pnpm install
 pnpm test
 pnpm typecheck
+pnpm build
 ```
