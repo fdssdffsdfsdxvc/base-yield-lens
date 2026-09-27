@@ -122,6 +122,87 @@ describe("summarizeYields", () => {
     expect(summary.lending[0]?.market).toBe("WETH");
     expect(formatSummary(summary)).toMatch(/Pools: 0[\s\S]*Lending: 1/);
   });
+
+  it("keeps pools data when only /lending fails", async () => {
+    const fetchImpl = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.endsWith("/pools")) {
+        return new Response(
+          JSON.stringify([
+            {
+              protocol: "aerodrome",
+              poolId: "0xdef",
+              symbol: "cbETH/WETH",
+              tvlUsd: 250_000,
+              aprPct: 8.25,
+              asOf: "2026-09-27T00:00:00.000Z",
+            },
+          ]),
+          { status: 200, headers: { "content-type": "application/json" } },
+        );
+      }
+      if (url.endsWith("/lending")) {
+        return new Response("unavailable", { status: 502 });
+      }
+      return new Response("not found", { status: 404 });
+    }) as unknown as typeof fetch;
+
+    const summary = await summarizeYields({
+      baseUrl: "https://mock.test/base-defi",
+      fetchImpl,
+    });
+
+    expect(summary.pools).toHaveLength(1);
+    expect(summary.pools[0]?.symbol).toBe("cbETH/WETH");
+    expect(summary.lending).toEqual([]);
+    expect(formatSummary(summary)).toMatch(/Pools: 1[\s\S]*Lending: 0/);
+  });
+
+  it("treats non-array JSON bodies as empty (no formatSummary crash)", async () => {
+    const fetchImpl = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.endsWith("/pools")) {
+        return new Response(JSON.stringify({ error: "wrong shape" }), {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        });
+      }
+      if (url.endsWith("/lending")) {
+        return new Response(JSON.stringify("not-an-array"), {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        });
+      }
+      return new Response("not found", { status: 404 });
+    }) as unknown as typeof fetch;
+
+    const summary = await summarizeYields({
+      baseUrl: "https://mock.test/base-defi",
+      fetchImpl,
+    });
+
+    expect(summary.pools).toEqual([]);
+    expect(summary.lending).toEqual([]);
+    expect(() => formatSummary(summary)).not.toThrow();
+  });
+
+  it("returns empty arrays when JSON body is malformed", async () => {
+    const fetchImpl = vi.fn(
+      async () =>
+        new Response("{not-json", {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        }),
+    ) as unknown as typeof fetch;
+
+    const summary = await summarizeYields({
+      baseUrl: "https://mock.test/base-defi",
+      fetchImpl,
+    });
+
+    expect(summary.pools).toEqual([]);
+    expect(summary.lending).toEqual([]);
+  });
 });
 
 describe("fetchJson", () => {
@@ -169,5 +250,38 @@ describe("formatSummary", () => {
         "Lending: 0",
       ].join("\n"),
     );
+  });
+
+  it("renders ? for non-finite numeric fields instead of NaN", () => {
+    const text = formatSummary({
+      chain: "base",
+      pools: [
+        {
+          protocol: "aerodrome",
+          poolId: "0xbad",
+          symbol: "BAD/USDC",
+          tvlUsd: Number.NaN,
+          aprPct: Number.POSITIVE_INFINITY,
+          asOf: "2026-09-27T00:00:00.000Z",
+        },
+      ],
+      lending: [
+        {
+          protocol: "aave-v3",
+          market: "USDC",
+          supplyApyPct: Number.NaN,
+          borrowApyPct: -Number.NaN,
+          asOf: "2026-09-27T00:00:00.000Z",
+        },
+      ],
+      fetchedAt: "2026-09-27T08:00:00.000Z",
+    });
+
+    expect(text).toContain("TVL=$?");
+    expect(text).toContain("APR=?%");
+    expect(text).toContain("supply=?%");
+    expect(text).toContain("borrow=?%");
+    expect(text).not.toContain("NaN");
+    expect(text).not.toContain("Infinity");
   });
 });

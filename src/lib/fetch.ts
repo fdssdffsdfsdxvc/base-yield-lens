@@ -30,6 +30,14 @@ export type YieldLensSummary = {
 
 const DEFAULT_BASE = "https://api.example.invalid/base-defi";
 
+function asArray<T>(value: unknown): T[] {
+  return Array.isArray(value) ? (value as T[]) : [];
+}
+
+function fmtNum(n: number, digits: number): string {
+  return Number.isFinite(n) ? n.toFixed(digits) : "?";
+}
+
 export async function fetchJson<T>(
   url: string,
   fetchImpl: typeof fetch = fetch,
@@ -52,14 +60,13 @@ export async function summarizeYields(opts?: {
   const fetchImpl = opts?.fetchImpl ?? fetch;
 
   // TODOs point at real integrations; stubs keep the CLI useful offline.
-  const pools = await fetchJson<PoolSnapshot[]>(
-    `${baseUrl}/pools`,
-    fetchImpl,
-  ).catch(() => [] as PoolSnapshot[]);
-  const lending = await fetchJson<LendingSnapshot[]>(
-    `${baseUrl}/lending`,
-    fetchImpl,
-  ).catch(() => [] as LendingSnapshot[]);
+  // Non-array / malformed JSON must not crash formatSummary later.
+  const pools = await fetchJson<unknown>(`${baseUrl}/pools`, fetchImpl)
+    .then((v) => asArray<PoolSnapshot>(v))
+    .catch(() => [] as PoolSnapshot[]);
+  const lending = await fetchJson<unknown>(`${baseUrl}/lending`, fetchImpl)
+    .then((v) => asArray<LendingSnapshot>(v))
+    .catch(() => [] as LendingSnapshot[]);
 
   return {
     chain: "base",
@@ -75,12 +82,12 @@ export function formatSummary(s: YieldLensSummary): string {
     `Pools: ${s.pools.length}`,
     ...s.pools.map(
       (p) =>
-        `  - [${p.protocol}] ${p.symbol} TVL=$${p.tvlUsd.toFixed(0)} APR=${p.aprPct.toFixed(2)}%`,
+        `  - [${p.protocol}] ${p.symbol} TVL=$${fmtNum(p.tvlUsd, 0)} APR=${fmtNum(p.aprPct, 2)}%`,
     ),
     `Lending: ${s.lending.length}`,
     ...s.lending.map(
       (m) =>
-        `  - [${m.protocol}] ${m.market} supply=${m.supplyApyPct.toFixed(2)}% borrow=${m.borrowApyPct.toFixed(2)}%`,
+        `  - [${m.protocol}] ${m.market} supply=${fmtNum(m.supplyApyPct, 2)}% borrow=${fmtNum(m.borrowApyPct, 2)}%`,
     ),
   ];
   return lines.join("\n");
