@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   fetchJson,
   formatSummary,
+  resolveBaseUrl,
   summarizeYields,
 } from "../src/lib/fetch.js";
 
@@ -283,5 +284,43 @@ describe("formatSummary", () => {
     expect(text).toContain("borrow=?%");
     expect(text).not.toContain("NaN");
     expect(text).not.toContain("Infinity");
+  });
+});
+
+describe("resolveBaseUrl", () => {
+  it("uses DEFAULT when unset, blank, or whitespace", () => {
+    const fallback = "https://api.example.invalid/base-defi";
+    expect(resolveBaseUrl()).toBe(fallback);
+    expect(resolveBaseUrl(undefined)).toBe(fallback);
+    expect(resolveBaseUrl("")).toBe(fallback);
+    expect(resolveBaseUrl("   ")).toBe(fallback);
+    expect(resolveBaseUrl("\t\n")).toBe(fallback);
+  });
+
+  it("trims and strips trailing slashes", () => {
+    expect(resolveBaseUrl(" https://mock.test/base-defi/ ")).toBe(
+      "https://mock.test/base-defi",
+    );
+    expect(resolveBaseUrl("https://mock.test/base-defi///")).toBe(
+      "https://mock.test/base-defi",
+    );
+  });
+
+  it("routes blank baseUrl through summarizeYields without building relative URLs", async () => {
+    const urls: string[] = [];
+    const fetchImpl = vi.fn(async (input: RequestInfo | URL) => {
+      urls.push(String(input));
+      return new Response("[]", {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      });
+    }) as unknown as typeof fetch;
+
+    await summarizeYields({ baseUrl: "  ", fetchImpl });
+
+    expect(urls).toEqual([
+      "https://api.example.invalid/base-defi/pools",
+      "https://api.example.invalid/base-defi/lending",
+    ]);
   });
 });

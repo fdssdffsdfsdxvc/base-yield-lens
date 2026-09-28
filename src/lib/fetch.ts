@@ -30,6 +30,13 @@ export type YieldLensSummary = {
 
 const DEFAULT_BASE = "https://api.example.invalid/base-defi";
 
+/** Blank / whitespace / trailing slashes → DEFAULT_BASE (or trimmed root). */
+export function resolveBaseUrl(baseUrl?: string): string {
+  const trimmed = baseUrl?.trim() ?? "";
+  if (!trimmed) return DEFAULT_BASE;
+  return trimmed.replace(/\/+$/, "");
+}
+
 function asArray<T>(value: unknown): T[] {
   return Array.isArray(value) ? (value as T[]) : [];
 }
@@ -56,7 +63,7 @@ export async function summarizeYields(opts?: {
   baseUrl?: string;
   fetchImpl?: typeof fetch;
 }): Promise<YieldLensSummary> {
-  const baseUrl = opts?.baseUrl ?? DEFAULT_BASE;
+  const baseUrl = resolveBaseUrl(opts?.baseUrl);
   const fetchImpl = opts?.fetchImpl ?? fetch;
 
   // TODOs point at real integrations; stubs keep the CLI useful offline.
