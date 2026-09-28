@@ -6,13 +6,21 @@
   "bin": {
     "base-yield-lens": "./dist/cli.js"
   },
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
     "cli": "tsx src/cli.ts"
   },
-  "keywords": ["base", "ethereum", "defi", "typescript"],
+  "keywords": [
+    "base",
+    "ethereum",
+    "defi",
+    "typescript"
+  ],
   "license": "MIT",
   "engines": {
     "node": ">=18"
