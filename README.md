@@ -15,10 +15,11 @@ pnpm install
 pnpm test
 pnpm typecheck
 pnpm build
+pnpm verify-pack
 pnpm cli
 ```
 
-After `pnpm build`, the package bin is available as `base-yield-lens` (points at `dist/cli.js`).
+After `pnpm build`, the package bin is available as `base-yield-lens` (points at `dist/cli.js`). `pnpm verify-pack` runs `npm pack` and asserts `dist/cli.js` + `dist/lib/fetch.js` are present (and `src/`/`tests/`/`scripts/` are not), so the `files:["dist"]` publish surface cannot regress.
 
 Optional: `YIELD_LENS_BASE_URL=https://your-api.example/base-defi`
 

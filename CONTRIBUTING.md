@@ -15,4 +15,5 @@ pnpm install
 pnpm test
 pnpm typecheck
 pnpm build
+pnpm verify-pack
 ```
