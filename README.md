@@ -24,7 +24,7 @@ Optional: `YIELD_LENS_BASE_URL=https://your-api.example/base-defi`
 
 Blank or whitespace-only `YIELD_LENS_BASE_URL` falls back to the built-in placeholder base. Trailing slashes on the base URL are stripped so `/pools` and `/lending` paths do not double.
 
-When the API is unreachable, returns non-OK, sends malformed JSON, or a non-array body, the CLI still prints a summary with **empty** pools/lending arrays (offline-friendly fallback) plus the disclaimer about placeholder APIs. Non-finite numeric fields render as `?` instead of `NaN`.
+When the API is unreachable, returns non-OK, sends malformed JSON, or a non-array body, the CLI still prints a summary with **empty** pools/lending arrays (offline-friendly fallback) plus the disclaimer about placeholder APIs. Null/non-object array elements are dropped; missing or blank string labels render as `?`. Non-finite (or non-number) numeric fields render as `?` instead of `NaN`.
 
 ## Scope
 - Base chain focus

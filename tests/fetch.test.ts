@@ -324,3 +324,104 @@ describe("resolveBaseUrl", () => {
     ]);
   });
 });
+
+describe("normalizePools / normalizeLending", () => {
+  it("drops null/non-object elements so formatSummary does not crash", async () => {
+    const fetchImpl = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.endsWith("/pools")) {
+        return new Response(
+          JSON.stringify([
+            null,
+            "nope",
+            {
+              protocol: "aerodrome",
+              poolId: "0xok",
+              symbol: "WETH/USDC",
+              tvlUsd: 10,
+              aprPct: 1,
+              asOf: "2026-09-29T00:00:00.000Z",
+            },
+          ]),
+          { status: 200, headers: { "content-type": "application/json" } },
+        );
+      }
+      if (url.endsWith("/lending")) {
+        return new Response(JSON.stringify([undefined, 42, null]), {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        });
+      }
+      return new Response("not found", { status: 404 });
+    }) as unknown as typeof fetch;
+
+    const summary = await summarizeYields({
+      baseUrl: "https://mock.test/base-defi",
+      fetchImpl,
+    });
+
+    expect(summary.pools).toHaveLength(1);
+    expect(summary.pools[0]?.symbol).toBe("WETH/USDC");
+    expect(summary.lending).toEqual([]);
+    expect(() => formatSummary(summary)).not.toThrow();
+    expect(formatSummary(summary)).toContain("WETH/USDC");
+    expect(formatSummary(summary)).not.toContain("undefined");
+    expect(formatSummary(summary)).not.toContain("null");
+  });
+
+  it("coerces missing/blank/non-string labels to ? and non-number metrics to NaN→?", async () => {
+    const fetchImpl = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.endsWith("/pools")) {
+        return new Response(
+          JSON.stringify([
+            {
+              protocol: "  ",
+              poolId: null,
+              symbol: 123,
+              tvlUsd: "not-a-number",
+              aprPct: null,
+              asOf: null,
+            },
+          ]),
+          { status: 200, headers: { "content-type": "application/json" } },
+        );
+      }
+      if (url.endsWith("/lending")) {
+        return new Response(
+          JSON.stringify([
+            {
+              protocol: null,
+              market: "",
+              supplyApyPct: "1",
+              borrowApyPct: {},
+            },
+          ]),
+          { status: 200, headers: { "content-type": "application/json" } },
+        );
+      }
+      return new Response("not found", { status: 404 });
+    }) as unknown as typeof fetch;
+
+    const summary = await summarizeYields({
+      baseUrl: "https://mock.test/base-defi",
+      fetchImpl,
+    });
+
+    expect(summary.pools[0]).toMatchObject({
+      protocol: "?",
+      poolId: "?",
+      symbol: "?",
+    });
+    expect(Number.isNaN(summary.pools[0]!.tvlUsd)).toBe(true);
+    expect(summary.lending[0]).toMatchObject({
+      protocol: "?",
+      market: "?",
+    });
+    const text = formatSummary(summary);
+    expect(text).toContain("[?] ? TVL=$? APR=?%");
+    expect(text).toContain("[?] ? supply=?% borrow=?%");
+    expect(text).not.toContain("undefined");
+    expect(text).not.toContain("null");
+  });
+});

@@ -37,8 +37,52 @@ export function resolveBaseUrl(baseUrl?: string): string {
   return trimmed.replace(/\/+$/, "");
 }
 
-function asArray<T>(value: unknown): T[] {
-  return Array.isArray(value) ? (value as T[]) : [];
+function asArray(value: unknown): unknown[] {
+  return Array.isArray(value) ? value : [];
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+/** Non-empty string label, else "?" (avoids "undefined"/"null" in CLI output). */
+export function fmtLabel(value: unknown): string {
+  if (typeof value === "string" && value.trim()) return value;
+  return "?";
+}
+
+function asNumber(value: unknown): number {
+  return typeof value === "number" ? value : Number.NaN;
+}
+
+function asOfString(value: unknown): string {
+  return typeof value === "string" ? value : "";
+}
+
+/** Drop non-objects / nulls; coerce fields so formatSummary never crashes. */
+export function normalizePools(value: unknown): PoolSnapshot[] {
+  return asArray(value)
+    .filter(isRecord)
+    .map((v) => ({
+      protocol: fmtLabel(v.protocol),
+      poolId: fmtLabel(v.poolId),
+      symbol: fmtLabel(v.symbol),
+      tvlUsd: asNumber(v.tvlUsd),
+      aprPct: asNumber(v.aprPct),
+      asOf: asOfString(v.asOf),
+    }));
+}
+
+export function normalizeLending(value: unknown): LendingSnapshot[] {
+  return asArray(value)
+    .filter(isRecord)
+    .map((v) => ({
+      protocol: fmtLabel(v.protocol),
+      market: fmtLabel(v.market),
+      supplyApyPct: asNumber(v.supplyApyPct),
+      borrowApyPct: asNumber(v.borrowApyPct),
+      asOf: asOfString(v.asOf),
+    }));
 }
 
 function fmtNum(n: number, digits: number): string {
@@ -67,12 +111,12 @@ export async function summarizeYields(opts?: {
   const fetchImpl = opts?.fetchImpl ?? fetch;
 
   // TODOs point at real integrations; stubs keep the CLI useful offline.
-  // Non-array / malformed JSON must not crash formatSummary later.
+  // Non-array / malformed JSON / null elements must not crash formatSummary later.
   const pools = await fetchJson<unknown>(`${baseUrl}/pools`, fetchImpl)
-    .then((v) => asArray<PoolSnapshot>(v))
+    .then((v) => normalizePools(v))
     .catch(() => [] as PoolSnapshot[]);
   const lending = await fetchJson<unknown>(`${baseUrl}/lending`, fetchImpl)
-    .then((v) => asArray<LendingSnapshot>(v))
+    .then((v) => normalizeLending(v))
     .catch(() => [] as LendingSnapshot[]);
 
   return {
@@ -89,12 +133,12 @@ export function formatSummary(s: YieldLensSummary): string {
     `Pools: ${s.pools.length}`,
     ...s.pools.map(
       (p) =>
-        `  - [${p.protocol}] ${p.symbol} TVL=$${fmtNum(p.tvlUsd, 0)} APR=${fmtNum(p.aprPct, 2)}%`,
+        `  - [${fmtLabel(p.protocol)}] ${fmtLabel(p.symbol)} TVL=$${fmtNum(p.tvlUsd, 0)} APR=${fmtNum(p.aprPct, 2)}%`,
     ),
     `Lending: ${s.lending.length}`,
     ...s.lending.map(
       (m) =>
-        `  - [${m.protocol}] ${m.market} supply=${fmtNum(m.supplyApyPct, 2)}% borrow=${fmtNum(m.borrowApyPct, 2)}%`,
+        `  - [${fmtLabel(m.protocol)}] ${fmtLabel(m.market)} supply=${fmtNum(m.supplyApyPct, 2)}% borrow=${fmtNum(m.borrowApyPct, 2)}%`,
     ),
   ];
   return lines.join("\n");
