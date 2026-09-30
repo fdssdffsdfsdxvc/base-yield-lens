@@ -17,7 +17,10 @@ pnpm typecheck
 pnpm build
 pnpm verify-pack
 pnpm cli
+pnpm cli -- --help
 ```
+
+Unknown CLI flags are rejected (exit 1). `--help` / `-h` print usage and exit 0.
 
 After `pnpm build`, the package bin is available as `base-yield-lens` (points at `dist/cli.js`). `pnpm verify-pack` runs `npm pack` and asserts `dist/cli.js` + `dist/lib/fetch.js` are present (and `src/`/`tests/`/`scripts/` are not), so the `files:["dist"]` publish surface cannot regress.
 

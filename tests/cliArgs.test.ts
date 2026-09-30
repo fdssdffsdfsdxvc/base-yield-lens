@@ -1,0 +1,27 @@
+import { describe, expect, it } from "vitest";
+import { CLI_USAGE, parseCliArgs } from "../src/cliArgs.js";
+
+describe("parseCliArgs", () => {
+  it("accepts empty argv (run summary)", () => {
+    expect(parseCliArgs([])).toEqual({ help: false });
+  });
+
+  it("treats --help and -h as help", () => {
+    expect(parseCliArgs(["--help"])).toEqual({ help: true });
+    expect(parseCliArgs(["-h"])).toEqual({ help: true });
+  });
+
+  it("rejects unknown flags with a clear error", () => {
+    expect(() => parseCliArgs(["--json"])).toThrow(/Unknown argument: --json/);
+    expect(() => parseCliArgs(["--json"])).toThrow(/--help/);
+    expect(() => parseCliArgs(["foo"])).toThrow(/Unknown argument: foo/);
+  });
+});
+
+describe("CLI_USAGE", () => {
+  it("documents bin name and YIELD_LENS_BASE_URL", () => {
+    expect(CLI_USAGE).toContain("base-yield-lens");
+    expect(CLI_USAGE).toContain("YIELD_LENS_BASE_URL");
+    expect(CLI_USAGE).toContain("--help");
+  });
+});
