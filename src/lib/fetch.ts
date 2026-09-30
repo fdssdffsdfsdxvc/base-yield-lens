@@ -30,11 +30,35 @@ export type YieldLensSummary = {
 
 const DEFAULT_BASE = "https://api.example.invalid/base-defi";
 
-/** Blank / whitespace / trailing slashes → DEFAULT_BASE (or trimmed root). */
+/**
+ * Public https API root: https only, non-empty host, no embedded credentials.
+ * Used for YIELD_LENS_BASE_URL after blank-check + trailing-slash strip.
+ */
+export function assertPublicHttpsBaseUrl(url: string): void {
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    throw new Error(`YIELD_LENS_BASE_URL must be a valid https URL: ${url}`);
+  }
+  if (parsed.protocol !== "https:") {
+    throw new Error(`YIELD_LENS_BASE_URL must be https: ${url}`);
+  }
+  if (!parsed.hostname) {
+    throw new Error(`YIELD_LENS_BASE_URL must include a host: ${url}`);
+  }
+  if (parsed.username || parsed.password) {
+    throw new Error(`YIELD_LENS_BASE_URL must not embed credentials: ${url}`);
+  }
+}
+
+/** Blank / whitespace / trailing slashes → DEFAULT_BASE (or trimmed https root). */
 export function resolveBaseUrl(baseUrl?: string): string {
   const trimmed = baseUrl?.trim() ?? "";
   if (!trimmed) return DEFAULT_BASE;
-  return trimmed.replace(/\/+$/, "");
+  const stripped = trimmed.replace(/\/+$/, "");
+  assertPublicHttpsBaseUrl(stripped);
+  return stripped;
 }
 
 function asArray(value: unknown): unknown[] {

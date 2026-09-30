@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import {
+  assertPublicHttpsBaseUrl,
   fetchJson,
   formatSummary,
   resolveBaseUrl,
@@ -306,6 +307,22 @@ describe("resolveBaseUrl", () => {
     );
   });
 
+  it("rejects non-https, credentialed, hostless, or invalid base URLs", () => {
+    expect(() => resolveBaseUrl("http://mock.test/base-defi")).toThrow(
+      /must be https/,
+    );
+    expect(() => resolveBaseUrl("ftp://mock.test/base-defi")).toThrow(
+      /must be https/,
+    );
+    expect(() => resolveBaseUrl("not-a-url")).toThrow(/valid https URL/);
+    expect(() => resolveBaseUrl("https://")).toThrow(
+      /valid https URL|must include a host/,
+    );
+    expect(() =>
+      resolveBaseUrl("https://user:secret@mock.test/base-defi"),
+    ).toThrow(/must not embed credentials/);
+  });
+
   it("routes blank baseUrl through summarizeYields without building relative URLs", async () => {
     const urls: string[] = [];
     const fetchImpl = vi.fn(async (input: RequestInfo | URL) => {
@@ -322,6 +339,23 @@ describe("resolveBaseUrl", () => {
       "https://api.example.invalid/base-defi/pools",
       "https://api.example.invalid/base-defi/lending",
     ]);
+  });
+});
+
+describe("assertPublicHttpsBaseUrl", () => {
+  it("accepts public https roots", () => {
+    expect(() =>
+      assertPublicHttpsBaseUrl("https://mock.test/base-defi"),
+    ).not.toThrow();
+  });
+
+  it("rejects http and embedded credentials", () => {
+    expect(() => assertPublicHttpsBaseUrl("http://mock.test/x")).toThrow(
+      /must be https/,
+    );
+    expect(() =>
+      assertPublicHttpsBaseUrl("https://u:p@mock.test/x"),
+    ).toThrow(/must not embed credentials/);
   });
 });
 
