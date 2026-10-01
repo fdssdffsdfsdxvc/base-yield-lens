@@ -30,8 +30,33 @@ export type YieldLensSummary = {
 
 const DEFAULT_BASE = "https://api.example.invalid/base-defi";
 
+/** True for localhost / loopback / RFC1918 / link-local / IPv6 ULA hostnames. */
+export function isNonPublicHostname(hostname: string): boolean {
+  const h = hostname.toLowerCase().replace(/\.$/, "");
+  if (
+    h === "localhost" ||
+    h === "0.0.0.0" ||
+    h === "::1" ||
+    h === "[::1]"
+  ) {
+    return true;
+  }
+  if (h.endsWith(".local")) return true;
+  if (/^127\./.test(h)) return true;
+  if (/^10\./.test(h)) return true;
+  if (/^192\.168\./.test(h)) return true;
+  if (/^169\.254\./.test(h)) return true;
+  if (/^172\.(1[6-9]|2\d|3[0-1])\./.test(h)) return true;
+  // IPv6 unique-local (fc00::/7) and link-local (fe80::/10)
+  if (/^f[cd][0-9a-f]*:/i.test(h) || /^fe[89ab][0-9a-f]*:/i.test(h)) {
+    return true;
+  }
+  return false;
+}
+
 /**
- * Public https API root: https only, non-empty host, no embedded credentials.
+ * Public https API root: https only, non-empty host, no embedded credentials,
+ * no localhost/private hosts.
  * Used for YIELD_LENS_BASE_URL after blank-check + trailing-slash strip.
  */
 export function assertPublicHttpsBaseUrl(url: string): void {
@@ -49,6 +74,9 @@ export function assertPublicHttpsBaseUrl(url: string): void {
   }
   if (parsed.username || parsed.password) {
     throw new Error(`YIELD_LENS_BASE_URL must not embed credentials: ${url}`);
+  }
+  if (isNonPublicHostname(parsed.hostname)) {
+    throw new Error(`YIELD_LENS_BASE_URL must not target a private host: ${url}`);
   }
 }
 

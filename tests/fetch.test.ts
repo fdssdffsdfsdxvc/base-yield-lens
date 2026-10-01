@@ -3,6 +3,7 @@ import {
   assertPublicHttpsBaseUrl,
   fetchJson,
   formatSummary,
+  isNonPublicHostname,
   resolveBaseUrl,
   summarizeYields,
 } from "../src/lib/fetch.js";
@@ -321,6 +322,12 @@ describe("resolveBaseUrl", () => {
     expect(() =>
       resolveBaseUrl("https://user:secret@mock.test/base-defi"),
     ).toThrow(/must not embed credentials/);
+    expect(() => resolveBaseUrl("https://127.0.0.1/base-defi")).toThrow(
+      /must not target a private host/,
+    );
+    expect(() => resolveBaseUrl("https://localhost/base-defi")).toThrow(
+      /must not target a private host/,
+    );
   });
 
   it("routes blank baseUrl through summarizeYields without building relative URLs", async () => {
@@ -356,6 +363,44 @@ describe("assertPublicHttpsBaseUrl", () => {
     expect(() =>
       assertPublicHttpsBaseUrl("https://u:p@mock.test/x"),
     ).toThrow(/must not embed credentials/);
+  });
+
+  it("rejects localhost and private-network hosts", () => {
+    expect(() =>
+      assertPublicHttpsBaseUrl("https://localhost/base-defi"),
+    ).toThrow(/must not target a private host/);
+    expect(() =>
+      assertPublicHttpsBaseUrl("https://127.0.0.1/base-defi"),
+    ).toThrow(/must not target a private host/);
+    expect(() =>
+      assertPublicHttpsBaseUrl("https://10.0.0.5/base-defi"),
+    ).toThrow(/must not target a private host/);
+    expect(() =>
+      assertPublicHttpsBaseUrl("https://192.168.1.1/base-defi"),
+    ).toThrow(/must not target a private host/);
+    expect(() =>
+      assertPublicHttpsBaseUrl("https://172.16.0.2/base-defi"),
+    ).toThrow(/must not target a private host/);
+  });
+});
+
+describe("isNonPublicHostname", () => {
+  it("flags loopback, RFC1918, link-local, .local, and IPv6 ULA", () => {
+    expect(isNonPublicHostname("localhost")).toBe(true);
+    expect(isNonPublicHostname("127.0.0.1")).toBe(true);
+    expect(isNonPublicHostname("10.1.2.3")).toBe(true);
+    expect(isNonPublicHostname("172.31.255.255")).toBe(true);
+    expect(isNonPublicHostname("192.168.0.1")).toBe(true);
+    expect(isNonPublicHostname("169.254.1.1")).toBe(true);
+    expect(isNonPublicHostname("printer.local")).toBe(true);
+    expect(isNonPublicHostname("fd12::1")).toBe(true);
+    expect(isNonPublicHostname("fe80::1")).toBe(true);
+  });
+
+  it("allows public hostnames", () => {
+    expect(isNonPublicHostname("api.example.invalid")).toBe(false);
+    expect(isNonPublicHostname("mock.test")).toBe(false);
+    expect(isNonPublicHostname("172.32.0.1")).toBe(false);
   });
 });
 
