@@ -56,7 +56,7 @@ export function isNonPublicHostname(hostname: string): boolean {
 
 /**
  * Public https API root: https only, non-empty host, no embedded credentials,
- * no localhost/private hosts.
+ * no localhost/private hosts, no query/hash (path join uses `${base}/pools`).
  * Used for YIELD_LENS_BASE_URL after blank-check + trailing-slash strip.
  */
 export function assertPublicHttpsBaseUrl(url: string): void {
@@ -77,6 +77,11 @@ export function assertPublicHttpsBaseUrl(url: string): void {
   }
   if (isNonPublicHostname(parsed.hostname)) {
     throw new Error(`YIELD_LENS_BASE_URL must not target a private host: ${url}`);
+  }
+  if (parsed.search || parsed.hash) {
+    throw new Error(
+      `YIELD_LENS_BASE_URL must not include query or hash: ${url}`,
+    );
   }
 }
 

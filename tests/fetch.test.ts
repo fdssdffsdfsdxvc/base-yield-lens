@@ -382,6 +382,18 @@ describe("assertPublicHttpsBaseUrl", () => {
       assertPublicHttpsBaseUrl("https://172.16.0.2/base-defi"),
     ).toThrow(/must not target a private host/);
   });
+
+  it("rejects query or hash on the API root (breaks /pools path join)", () => {
+    expect(() =>
+      assertPublicHttpsBaseUrl("https://mock.test/base-defi?x=1"),
+    ).toThrow(/must not include query or hash/);
+    expect(() =>
+      assertPublicHttpsBaseUrl("https://mock.test/base-defi#frag"),
+    ).toThrow(/must not include query or hash/);
+    expect(() =>
+      resolveBaseUrl("https://mock.test/base-defi?token=secret"),
+    ).toThrow(/must not include query or hash/);
+  });
 });
 
 describe("isNonPublicHostname", () => {

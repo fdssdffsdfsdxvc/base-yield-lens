@@ -6,7 +6,8 @@ Usage:
 
 Env:
   YIELD_LENS_BASE_URL  Optional https API root (blank → built-in placeholder).
-                       Must be absolute https with a host; no credentials.
+                       Must be absolute https with a host; no credentials,
+                       private hosts, query, or hash.
 
 Not financial advice. Placeholder APIs until real Base endpoints are wired.
 `;
