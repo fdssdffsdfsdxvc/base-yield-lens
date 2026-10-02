@@ -32,12 +32,12 @@ const DEFAULT_BASE = "https://api.example.invalid/base-defi";
 
 /** True for localhost / loopback / RFC1918 / link-local / IPv6 ULA hostnames. */
 export function isNonPublicHostname(hostname: string): boolean {
-  const h = hostname.toLowerCase().replace(/\.$/, "");
+  // Node may keep brackets on IPv6 hostnames ("[fd12::1]").
+  const h = hostname.toLowerCase().replace(/\.$/, "").replace(/^\[|\]$/g, "");
   if (
     h === "localhost" ||
     h === "0.0.0.0" ||
-    h === "::1" ||
-    h === "[::1]"
+    h === "::1"
   ) {
     return true;
   }
