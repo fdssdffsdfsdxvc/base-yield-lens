@@ -26,7 +26,7 @@ After `pnpm build`, the package bin is available as `base-yield-lens` (points at
 
 Optional: `YIELD_LENS_BASE_URL=https://your-api.example/base-defi`
 
-Blank or whitespace-only `YIELD_LENS_BASE_URL` falls back to the built-in placeholder base. Trailing slashes on the base URL are stripped so `/pools` and `/lending` paths do not double. Non-blank values must be absolute **https** URLs with a host and without embedded credentials (`user:pass@`); localhost / `.localhost` / private-network / bracketed IPv6 ULA hosts are rejected; query strings and hashes are rejected (they would break `/pools` and `/lending` path joining); otherwise the CLI exits with a clear error.
+Blank or whitespace-only `YIELD_LENS_BASE_URL` falls back to the built-in placeholder base. Trailing slashes on the base URL are stripped so `/pools` and `/lending` paths do not double. Non-blank values must be absolute **https** URLs with a host and without embedded credentials (`user:pass@`); localhost / `.localhost` / private-network / CGNAT (100.64/10) / bracketed IPv6 ULA hosts are rejected; query strings and hashes are rejected (they would break `/pools` and `/lending` path joining); otherwise the CLI exits with a clear error.
 
 When the API is unreachable, returns non-OK, sends malformed JSON, or a non-array body, the CLI still prints a summary with **empty** pools/lending arrays (offline-friendly fallback) plus the disclaimer about placeholder APIs. Null/non-object array elements are dropped; missing or blank string labels render as `?`. Non-finite (or non-number) numeric fields render as `?` instead of `NaN`.
 

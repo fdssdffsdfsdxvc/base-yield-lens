@@ -387,6 +387,9 @@ describe("assertPublicHttpsBaseUrl", () => {
     expect(() =>
       assertPublicHttpsBaseUrl("https://api.localhost/base-defi"),
     ).toThrow(/must not target a private host/);
+    expect(() =>
+      assertPublicHttpsBaseUrl("https://100.64.1.2/base-defi"),
+    ).toThrow(/must not target a private host/);
   });
 
   it("rejects query or hash on the API root (breaks /pools path join)", () => {
@@ -410,6 +413,8 @@ describe("isNonPublicHostname", () => {
     expect(isNonPublicHostname("172.31.255.255")).toBe(true);
     expect(isNonPublicHostname("192.168.0.1")).toBe(true);
     expect(isNonPublicHostname("169.254.1.1")).toBe(true);
+    expect(isNonPublicHostname("100.64.0.1")).toBe(true);
+    expect(isNonPublicHostname("100.127.255.254")).toBe(true);
     expect(isNonPublicHostname("printer.local")).toBe(true);
     expect(isNonPublicHostname("api.localhost")).toBe(true);
     expect(isNonPublicHostname("fd12::1")).toBe(true);
@@ -424,6 +429,8 @@ describe("isNonPublicHostname", () => {
     expect(isNonPublicHostname("api.example.invalid")).toBe(false);
     expect(isNonPublicHostname("mock.test")).toBe(false);
     expect(isNonPublicHostname("172.32.0.1")).toBe(false);
+    expect(isNonPublicHostname("100.63.255.255")).toBe(false);
+    expect(isNonPublicHostname("100.128.0.1")).toBe(false);
   });
 });
 

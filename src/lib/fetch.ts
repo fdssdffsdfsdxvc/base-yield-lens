@@ -30,7 +30,7 @@ export type YieldLensSummary = {
 
 const DEFAULT_BASE = "https://api.example.invalid/base-defi";
 
-/** True for localhost / loopback / RFC1918 / link-local / IPv6 ULA / .local/.localhost. */
+/** True for localhost / loopback / RFC1918 / CGNAT / link-local / IPv6 ULA / .local/.localhost. */
 export function isNonPublicHostname(hostname: string): boolean {
   // Node may keep brackets on IPv6 hostnames ("[fd12::1]").
   const h = hostname.toLowerCase().replace(/\.$/, "").replace(/^\[|\]$/g, "");
@@ -47,6 +47,8 @@ export function isNonPublicHostname(hostname: string): boolean {
   if (/^192\.168\./.test(h)) return true;
   if (/^169\.254\./.test(h)) return true;
   if (/^172\.(1[6-9]|2\d|3[0-1])\./.test(h)) return true;
+  // CGNAT / shared address space (RFC 6598) 100.64.0.0/10
+  if (/^100\.(6[4-9]|[7-9]\d|1[0-1]\d|12[0-7])\./.test(h)) return true;
   // IPv6 unique-local (fc00::/7) and link-local (fe80::/10)
   if (/^f[cd][0-9a-f]*:/i.test(h) || /^fe[89ab][0-9a-f]*:/i.test(h)) {
     return true;
