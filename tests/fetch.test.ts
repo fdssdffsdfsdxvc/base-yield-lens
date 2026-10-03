@@ -400,6 +400,9 @@ describe("assertPublicHttpsBaseUrl", () => {
     expect(() =>
       assertPublicHttpsBaseUrl("https://[::]/base-defi"),
     ).toThrow(/must not target a private host/);
+    expect(() =>
+      assertPublicHttpsBaseUrl("https://224.0.0.251/base-defi"),
+    ).toThrow(/must not target a private host/);
   });
 
   it("rejects query or hash on the API root (breaks /pools path join)", () => {
@@ -437,6 +440,9 @@ describe("isNonPublicHostname", () => {
     expect(isNonPublicHostname("[::1]")).toBe(true);
     expect(isNonPublicHostname("::")).toBe(true);
     expect(isNonPublicHostname("[::]")).toBe(true);
+    expect(isNonPublicHostname("224.0.0.1")).toBe(true);
+    expect(isNonPublicHostname("239.255.255.255")).toBe(true);
+    expect(isNonPublicHostname("255.255.255.255")).toBe(true);
   });
 
   it("allows public hostnames", () => {
@@ -445,6 +451,7 @@ describe("isNonPublicHostname", () => {
     expect(isNonPublicHostname("172.32.0.1")).toBe(false);
     expect(isNonPublicHostname("100.63.255.255")).toBe(false);
     expect(isNonPublicHostname("100.128.0.1")).toBe(false);
+    expect(isNonPublicHostname("223.255.255.255")).toBe(false);
   });
 
   it("flags private IPv4-mapped IPv6 (::ffff:) hosts", () => {
