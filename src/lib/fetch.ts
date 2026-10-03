@@ -56,6 +56,7 @@ export function isNonPublicHostname(hostname: string): boolean {
   if (
     h === "localhost" ||
     h === "0.0.0.0" ||
+    h === "::" ||
     h === "::1"
   ) {
     return true;
