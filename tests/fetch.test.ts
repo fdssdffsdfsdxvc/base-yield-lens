@@ -394,6 +394,9 @@ describe("assertPublicHttpsBaseUrl", () => {
     expect(() =>
       assertPublicHttpsBaseUrl("https://[::ffff:127.0.0.1]/base-defi"),
     ).toThrow(/must not target a private host/);
+    expect(() =>
+      assertPublicHttpsBaseUrl("https://0.0.0.42/base-defi"),
+    ).toThrow(/must not target a private host/);
   });
 
   it("rejects query or hash on the API root (breaks /pools path join)", () => {
@@ -413,6 +416,8 @@ describe("isNonPublicHostname", () => {
   it("flags loopback, RFC1918, link-local, .local, and IPv6 ULA", () => {
     expect(isNonPublicHostname("localhost")).toBe(true);
     expect(isNonPublicHostname("127.0.0.1")).toBe(true);
+    expect(isNonPublicHostname("0.0.0.1")).toBe(true);
+    expect(isNonPublicHostname("0.255.255.255")).toBe(true);
     expect(isNonPublicHostname("10.1.2.3")).toBe(true);
     expect(isNonPublicHostname("172.31.255.255")).toBe(true);
     expect(isNonPublicHostname("192.168.0.1")).toBe(true);

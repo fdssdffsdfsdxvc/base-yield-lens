@@ -47,7 +47,7 @@ export function ipv4MappedAddress(hostname: string): string | null {
   return null;
 }
 
-/** True for localhost / loopback / RFC1918 / CGNAT / link-local / IPv6 ULA / .local/.localhost. */
+/** True for localhost / loopback / 0.0.0.0\/8 / RFC1918 / CGNAT / link-local / IPv6 ULA / .local/.localhost. */
 export function isNonPublicHostname(hostname: string): boolean {
   // Node may keep brackets on IPv6 hostnames ("[fd12::1]").
   const h = hostname.toLowerCase().replace(/\.$/, "").replace(/^\[|\]$/g, "");
@@ -62,6 +62,8 @@ export function isNonPublicHostname(hostname: string): boolean {
   }
   if (h.endsWith(".local") || h.endsWith(".localhost")) return true;
   if (/^127\./.test(h)) return true;
+  // "This network" 0.0.0.0/8 (exact 0.0.0.0 already matched above).
+  if (/^0\./.test(h)) return true;
   if (/^10\./.test(h)) return true;
   if (/^192\.168\./.test(h)) return true;
   if (/^169\.254\./.test(h)) return true;
