@@ -403,6 +403,9 @@ describe("assertPublicHttpsBaseUrl", () => {
     expect(() =>
       assertPublicHttpsBaseUrl("https://224.0.0.251/base-defi"),
     ).toThrow(/must not target a private host/);
+    expect(() =>
+      assertPublicHttpsBaseUrl("https://metadata.google.internal/base-defi"),
+    ).toThrow(/must not target a private host/);
   });
 
   it("rejects query or hash on the API root (breaks /pools path join)", () => {
@@ -432,6 +435,7 @@ describe("isNonPublicHostname", () => {
     expect(isNonPublicHostname("100.127.255.254")).toBe(true);
     expect(isNonPublicHostname("printer.local")).toBe(true);
     expect(isNonPublicHostname("api.localhost")).toBe(true);
+    expect(isNonPublicHostname("metadata.google.internal")).toBe(true);
     expect(isNonPublicHostname("fd12::1")).toBe(true);
     expect(isNonPublicHostname("fe80::1")).toBe(true);
     // Node URL.hostname keeps brackets for IPv6 literals.
