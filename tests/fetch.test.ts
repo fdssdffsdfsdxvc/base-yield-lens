@@ -3,6 +3,7 @@ import {
   assertPublicHttpsBaseUrl,
   fetchJson,
   formatSummary,
+  ipv4MappedAddress,
   isNonPublicHostname,
   resolveBaseUrl,
   summarizeYields,
@@ -390,6 +391,9 @@ describe("assertPublicHttpsBaseUrl", () => {
     expect(() =>
       assertPublicHttpsBaseUrl("https://100.64.1.2/base-defi"),
     ).toThrow(/must not target a private host/);
+    expect(() =>
+      assertPublicHttpsBaseUrl("https://[::ffff:127.0.0.1]/base-defi"),
+    ).toThrow(/must not target a private host/);
   });
 
   it("rejects query or hash on the API root (breaks /pools path join)", () => {
@@ -431,6 +435,19 @@ describe("isNonPublicHostname", () => {
     expect(isNonPublicHostname("172.32.0.1")).toBe(false);
     expect(isNonPublicHostname("100.63.255.255")).toBe(false);
     expect(isNonPublicHostname("100.128.0.1")).toBe(false);
+  });
+
+  it("flags private IPv4-mapped IPv6 (::ffff:) hosts", () => {
+    expect(ipv4MappedAddress("::ffff:127.0.0.1")).toBe("127.0.0.1");
+    expect(ipv4MappedAddress("[::ffff:7f00:1]")).toBe("127.0.0.1");
+    expect(ipv4MappedAddress("::ffff:10.0.0.1")).toBe("10.0.0.1");
+    expect(ipv4MappedAddress("[::ffff:a00:1]")).toBe("10.0.0.1");
+    expect(isNonPublicHostname("::ffff:127.0.0.1")).toBe(true);
+    expect(isNonPublicHostname("[::ffff:7f00:1]")).toBe(true);
+    expect(isNonPublicHostname("::ffff:10.1.2.3")).toBe(true);
+    expect(isNonPublicHostname("[::ffff:c0a8:101]")).toBe(true); // 192.168.1.1
+    expect(isNonPublicHostname("::ffff:8.8.8.8")).toBe(false);
+    expect(isNonPublicHostname("[::ffff:808:808]")).toBe(false); // 8.8.8.8
   });
 });
 

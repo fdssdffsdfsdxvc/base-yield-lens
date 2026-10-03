@@ -30,10 +30,29 @@ export type YieldLensSummary = {
 
 const DEFAULT_BASE = "https://api.example.invalid/base-defi";
 
+/**
+ * If hostname is IPv4-mapped IPv6 (::ffff:…), return the embedded IPv4 string.
+ * Node URL.hostname often rewrites dotted form to two hextets ("[::ffff:7f00:1]").
+ */
+export function ipv4MappedAddress(hostname: string): string | null {
+  const h = hostname.toLowerCase().replace(/\.$/, "").replace(/^\[|\]$/g, "");
+  const dotted = /^::ffff:(\d{1,3}(?:\.\d{1,3}){3})$/i.exec(h);
+  if (dotted) return dotted[1]!;
+  const hex = /^::ffff:([0-9a-f]{1,4}):([0-9a-f]{1,4})$/i.exec(h);
+  if (hex) {
+    const hi = Number.parseInt(hex[1]!, 16);
+    const lo = Number.parseInt(hex[2]!, 16);
+    return `${(hi >> 8) & 255}.${hi & 255}.${(lo >> 8) & 255}.${lo & 255}`;
+  }
+  return null;
+}
+
 /** True for localhost / loopback / RFC1918 / CGNAT / link-local / IPv6 ULA / .local/.localhost. */
 export function isNonPublicHostname(hostname: string): boolean {
   // Node may keep brackets on IPv6 hostnames ("[fd12::1]").
   const h = hostname.toLowerCase().replace(/\.$/, "").replace(/^\[|\]$/g, "");
+  const mapped = ipv4MappedAddress(h);
+  if (mapped) return isNonPublicHostname(mapped);
   if (
     h === "localhost" ||
     h === "0.0.0.0" ||
