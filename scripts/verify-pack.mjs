@@ -10,6 +10,7 @@ import { join } from "node:path";
 
 const required = [
   "dist/cli.js",
+  "dist/cliArgs.js",
   "dist/lib/fetch.js",
   "package.json",
   "LICENSE",
