@@ -18,6 +18,9 @@ export type ParsedCliArgs = { help: boolean };
 export function parseCliArgs(argv: string[]): ParsedCliArgs {
   let help = false;
   for (const arg of argv) {
+    if (arg.trim() === "") {
+      throw new Error("Empty argument is not allowed\nUse --help for usage.");
+    }
     if (arg === "--help" || arg === "-h") {
       help = true;
       continue;

@@ -16,6 +16,12 @@ describe("parseCliArgs", () => {
     expect(() => parseCliArgs(["--json"])).toThrow(/--help/);
     expect(() => parseCliArgs(["foo"])).toThrow(/Unknown argument: foo/);
   });
+
+  it("rejects empty or whitespace-only arguments", () => {
+    expect(() => parseCliArgs([""])).toThrow(/Empty argument is not allowed/);
+    expect(() => parseCliArgs(["   "])).toThrow(/Empty argument is not allowed/);
+    expect(() => parseCliArgs(["--help", ""])).toThrow(/Empty argument is not allowed/);
+  });
 });
 
 describe("CLI_USAGE", () => {
