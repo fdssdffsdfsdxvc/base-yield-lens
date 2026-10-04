@@ -529,6 +529,58 @@ describe("normalizePools / normalizeLending", () => {
     expect(formatSummary(summary)).not.toContain("null");
   });
 
+  it("drops nested array elements so they do not become junk ? rows", async () => {
+    const fetchImpl = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.endsWith("/pools")) {
+        return new Response(
+          JSON.stringify([
+            ["nested", "array"],
+            {
+              protocol: "aerodrome",
+              poolId: "0xok",
+              symbol: "WETH/USDC",
+              tvlUsd: 10,
+              aprPct: 1,
+              asOf: "2026-10-04T00:00:00.000Z",
+            },
+          ]),
+          { status: 200, headers: { "content-type": "application/json" } },
+        );
+      }
+      if (url.endsWith("/lending")) {
+        return new Response(
+          JSON.stringify([
+            [{ market: "nested" }],
+            {
+              protocol: "aave-v3",
+              market: "USDC",
+              supplyApyPct: 3,
+              borrowApyPct: 4,
+              asOf: "2026-10-04T00:00:00.000Z",
+            },
+          ]),
+          { status: 200, headers: { "content-type": "application/json" } },
+        );
+      }
+      return new Response("not found", { status: 404 });
+    }) as unknown as typeof fetch;
+
+    const summary = await summarizeYields({
+      baseUrl: "https://mock.test/base-defi",
+      fetchImpl,
+    });
+
+    expect(summary.pools).toHaveLength(1);
+    expect(summary.pools[0]?.symbol).toBe("WETH/USDC");
+    expect(summary.lending).toHaveLength(1);
+    expect(summary.lending[0]?.market).toBe("USDC");
+    const text = formatSummary(summary);
+    expect(text).toContain("Pools: 1");
+    expect(text).toContain("Lending: 1");
+    expect(text).not.toMatch(/Pools: 2/);
+  });
+
   it("coerces missing/blank/non-string labels to ? and non-number metrics to NaN→?", async () => {
     const fetchImpl = vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input);

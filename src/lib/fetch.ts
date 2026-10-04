@@ -125,7 +125,8 @@ function asArray(value: unknown): unknown[] {
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null;
+  // Arrays are objects in JS; reject them so nested lists do not become junk "?" rows.
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 /** Non-empty string label (trimmed), else "?" (avoids "undefined"/"null" in CLI output). */
@@ -145,7 +146,7 @@ function asOfString(value: unknown): string {
   return typeof value === "string" ? value : "";
 }
 
-/** Drop non-objects / nulls; coerce fields so formatSummary never crashes. */
+/** Drop nulls / non-objects / arrays; coerce fields so formatSummary never crashes. */
 export function normalizePools(value: unknown): PoolSnapshot[] {
   return asArray(value)
     .filter(isRecord)
