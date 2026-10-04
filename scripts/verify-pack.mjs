@@ -12,6 +12,7 @@ const required = [
   "dist/cli.js",
   "dist/cliArgs.js",
   "dist/lib/fetch.js",
+  "dist/lib/fetch.d.ts",
   "package.json",
   "LICENSE",
   "README.md",
@@ -73,8 +74,17 @@ try {
       `pack package.json files must include "dist": ${JSON.stringify(pkg.files)}`,
     );
   }
+  if (pkg.main !== "./dist/lib/fetch.js" || pkg.types !== "./dist/lib/fetch.d.ts") {
+    throw new Error(
+      `pack package.json main/types must point at dist/lib/fetch: main=${pkg.main} types=${pkg.types}`,
+    );
+  }
+  const exp = pkg.exports?.["."];
+  if (!exp || exp.import !== "./dist/lib/fetch.js" || exp.types !== "./dist/lib/fetch.d.ts") {
+    throw new Error(`pack package.json exports["."] must point at dist/lib/fetch.js`);
+  }
 
-  console.log("verify-pack: ok —", required.join(", "), "+ bin + files");
+  console.log("verify-pack: ok —", required.join(", "), "+ bin + files + exports");
 } finally {
   rmSync(dir, { recursive: true, force: true });
 }

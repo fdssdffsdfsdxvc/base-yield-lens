@@ -6,6 +6,14 @@
   "bin": {
     "base-yield-lens": "./dist/cli.js"
   },
+  "main": "./dist/lib/fetch.js",
+  "types": "./dist/lib/fetch.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/lib/fetch.d.ts",
+      "import": "./dist/lib/fetch.js"
+    }
+  },
   "files": [
     "dist"
   ],
