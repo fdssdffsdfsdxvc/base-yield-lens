@@ -128,9 +128,12 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
 
-/** Non-empty string label, else "?" (avoids "undefined"/"null" in CLI output). */
+/** Non-empty string label (trimmed), else "?" (avoids "undefined"/"null" in CLI output). */
 export function fmtLabel(value: unknown): string {
-  if (typeof value === "string" && value.trim()) return value;
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (trimmed) return trimmed;
+  }
   return "?";
 }
 

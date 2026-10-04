@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   assertPublicHttpsBaseUrl,
   fetchJson,
+  fmtLabel,
   formatSummary,
   ipv4MappedAddress,
   isNonPublicHostname,
@@ -469,6 +470,18 @@ describe("isNonPublicHostname", () => {
     expect(isNonPublicHostname("[::ffff:c0a8:101]")).toBe(true); // 192.168.1.1
     expect(isNonPublicHostname("::ffff:8.8.8.8")).toBe(false);
     expect(isNonPublicHostname("[::ffff:808:808]")).toBe(false); // 8.8.8.8
+  });
+});
+
+describe("fmtLabel", () => {
+  it("trims surrounding whitespace on non-blank labels", () => {
+    expect(fmtLabel("  aerodrome  ")).toBe("aerodrome");
+    expect(fmtLabel("\tWETH/USDC\n")).toBe("WETH/USDC");
+    expect(fmtLabel("ok")).toBe("ok");
+    expect(fmtLabel("   ")).toBe("?");
+    expect(fmtLabel("")).toBe("?");
+    expect(fmtLabel(null)).toBe("?");
+    expect(fmtLabel(12)).toBe("?");
   });
 });
 
