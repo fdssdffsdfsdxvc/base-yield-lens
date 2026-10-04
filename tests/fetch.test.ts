@@ -581,7 +581,76 @@ describe("normalizePools / normalizeLending", () => {
     expect(text).not.toMatch(/Pools: 2/);
   });
 
-  it("coerces missing/blank/non-string labels to ? and non-number metrics to NaN→?", async () => {
+  it("accepts finite numeric strings for pool/lending metrics", async () => {
+    const fetchImpl = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.endsWith("/pools")) {
+        return new Response(
+          JSON.stringify([
+            {
+              protocol: "aerodrome",
+              poolId: "0x1",
+              symbol: "WETH/USDC",
+              tvlUsd: "1000000",
+              aprPct: "12.5",
+              asOf: "2026-10-04T00:00:00.000Z",
+            },
+          ]),
+          { status: 200, headers: { "content-type": "application/json" } },
+        );
+      }
+      if (url.endsWith("/lending")) {
+        return new Response(
+          JSON.stringify([
+            {
+              protocol: "aave-v3",
+              market: "USDC",
+              supplyApyPct: "3.1",
+              borrowApyPct: " 4.2 ",
+              asOf: "2026-10-04T00:00:00.000Z",
+            },
+          ]),
+          { status: 200, headers: { "content-type": "application/json" } },
+        );
+      }
+      return new Response("not found", { status: 404 });
+    }) as unknown as typeof fetch;
+
+    const summary = await summarizeYields({
+      baseUrl: "https://mock.test/base-defi",
+      fetchImpl,
+    });
+
+    expect(summary.pools[0]?.tvlUsd).toBe(1_000_000);
+    expect(summary.pools[0]?.aprPct).toBe(12.5);
+    expect(summary.lending[0]?.supplyApyPct).toBe(3.1);
+    expect(summary.lending[0]?.borrowApyPct).toBe(4.2);
+    const text = formatSummary(summary);
+    expect(text).toContain("TVL=$1000000");
+    expect(text).toContain("APR=12.50%");
+    expect(text).toContain("supply=3.10%");
+    expect(text).toContain("borrow=4.20%");
+    // Booleans/arrays must not coerce via Number(true)===1 / Number([5])===5.
+    const bad = await summarizeYields({
+      baseUrl: "https://mock.test/base-defi",
+      fetchImpl: vi.fn(async (input: RequestInfo | URL) => {
+        const url = String(input);
+        const body = url.endsWith("/pools")
+          ? [{ protocol: "x", poolId: "1", symbol: "Y", tvlUsd: true, aprPct: [5], asOf: "t" }]
+          : [{ protocol: "x", market: "Y", supplyApyPct: false, borrowApyPct: {}, asOf: "t" }];
+        return new Response(JSON.stringify(body), {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        });
+      }) as unknown as typeof fetch,
+    });
+    expect(Number.isNaN(bad.pools[0]!.tvlUsd)).toBe(true);
+    expect(Number.isNaN(bad.pools[0]!.aprPct)).toBe(true);
+    expect(Number.isNaN(bad.lending[0]!.supplyApyPct)).toBe(true);
+    expect(formatSummary(bad)).toContain("TVL=$?");
+  });
+
+  it("coerces missing/blank/non-string labels to ?; non-numeric metrics to NaN→?", async () => {
     const fetchImpl = vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input);
       if (url.endsWith("/pools")) {
@@ -629,10 +698,12 @@ describe("normalizePools / normalizeLending", () => {
     expect(summary.lending[0]).toMatchObject({
       protocol: "?",
       market: "?",
+      supplyApyPct: 1,
     });
+    expect(Number.isNaN(summary.lending[0]!.borrowApyPct)).toBe(true);
     const text = formatSummary(summary);
     expect(text).toContain("[?] ? TVL=$? APR=?%");
-    expect(text).toContain("[?] ? supply=?% borrow=?%");
+    expect(text).toContain("[?] ? supply=1.00% borrow=?%");
     expect(text).not.toContain("undefined");
     expect(text).not.toContain("null");
   });

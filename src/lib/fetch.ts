@@ -138,8 +138,17 @@ export function fmtLabel(value: unknown): string {
   return "?";
 }
 
+/**
+ * Coerce metrics for display. Numbers pass through (NaN/±Infinity → "?" via fmtNum).
+ * Non-empty numeric strings are accepted; booleans/arrays/objects/blank → NaN.
+ */
 function asNumber(value: unknown): number {
-  return typeof value === "number" ? value : Number.NaN;
+  if (typeof value === "number") return value;
+  if (typeof value === "string" && value.trim() !== "") {
+    const n = Number(value);
+    return Number.isFinite(n) ? n : Number.NaN;
+  }
+  return Number.NaN;
 }
 
 function asOfString(value: unknown): string {
