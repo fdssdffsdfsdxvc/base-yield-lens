@@ -83,8 +83,22 @@ try {
   if (!exp || exp.import !== "./dist/lib/fetch.js" || exp.types !== "./dist/lib/fetch.d.ts") {
     throw new Error(`pack package.json exports["."] must point at dist/lib/fetch.js`);
   }
+  if (pkg.license !== "MIT") {
+    throw new Error(
+      `pack package.json license must be MIT: ${JSON.stringify(pkg.license)}`,
+    );
+  }
+  if (pkg.engines?.node !== ">=18") {
+    throw new Error(
+      `pack package.json engines.node must be ">=18": ${JSON.stringify(pkg.engines)}`,
+    );
+  }
 
-  console.log("verify-pack: ok —", required.join(", "), "+ bin + files + exports");
+  console.log(
+    "verify-pack: ok —",
+    required.join(", "),
+    "+ bin + files + exports + license + engines",
+  );
 } finally {
   rmSync(dir, { recursive: true, force: true });
 }
