@@ -6,6 +6,7 @@ import {
   formatSummary,
   ipv4MappedAddress,
   isNonPublicHostname,
+  redactUrlCredentials,
   resolveBaseUrl,
   summarizeYields,
 } from "../src/lib/fetch.js";
@@ -706,5 +707,42 @@ describe("normalizePools / normalizeLending", () => {
     expect(text).toContain("[?] ? supply=1.00% borrow=?%");
     expect(text).not.toContain("undefined");
     expect(text).not.toContain("null");
+  });
+});
+
+describe("redactUrlCredentials", () => {
+  it("masks userinfo and leaves credential-free URLs untouched", () => {
+    expect(redactUrlCredentials("https://user:hunter2@mock.test/x")).toBe(
+      "https://***@mock.test/x",
+    );
+    expect(redactUrlCredentials("https:u:p@mock.test/x")).toBe(
+      "https:***@mock.test/x",
+    );
+    expect(redactUrlCredentials("https://a@b:c@mock.test/x")).toBe(
+      "https://***@mock.test/x",
+    );
+    expect(redactUrlCredentials("https://mock.test/a@b")).toBe(
+      "https://mock.test/a@b",
+    );
+    expect(redactUrlCredentials("not-a-url")).toBe("not-a-url");
+  });
+
+  it("never echoes embedded passwords in YIELD_LENS_BASE_URL errors", () => {
+    const cases = [
+      "https://user:hunter2@mock.test/base-defi",
+      "http://user:hunter2@mock.test/base-defi",
+      "https://user:hunter2@127.0.0.1/base-defi",
+    ];
+    for (const url of cases) {
+      let message = "";
+      try {
+        resolveBaseUrl(url);
+      } catch (err) {
+        message = (err as Error).message;
+      }
+      expect(message).toMatch(/^YIELD_LENS_BASE_URL must/);
+      expect(message).not.toContain("hunter2");
+      expect(message).toContain("***@");
+    }
   });
 });

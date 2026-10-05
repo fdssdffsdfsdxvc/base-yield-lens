@@ -81,32 +81,42 @@ export function isNonPublicHostname(hostname: string): boolean {
 }
 
 /**
+ * Mask URL userinfo (`user:pass@`) so error messages never echo secrets to
+ * stderr/logs. Works on unparseable input too (regex, not URL parsing).
+ */
+export function redactUrlCredentials(url: string): string {
+  // WHATWG URL accepts "https:u:p@h" and backslashes for special schemes too.
+  return url.replace(/^(\s*[a-z][a-z0-9+.-]*:[\/\\]*)[^/\\?#]*@/i, "$1***@");
+}
+
+/**
  * Public https API root: https only, non-empty host, no embedded credentials,
  * no localhost/private hosts, no query/hash (path join uses `${base}/pools`).
  * Used for YIELD_LENS_BASE_URL after blank-check + trailing-slash strip.
  */
 export function assertPublicHttpsBaseUrl(url: string): void {
+  const shown = redactUrlCredentials(url);
   let parsed: URL;
   try {
     parsed = new URL(url);
   } catch {
-    throw new Error(`YIELD_LENS_BASE_URL must be a valid https URL: ${url}`);
+    throw new Error(`YIELD_LENS_BASE_URL must be a valid https URL: ${shown}`);
   }
   if (parsed.protocol !== "https:") {
-    throw new Error(`YIELD_LENS_BASE_URL must be https: ${url}`);
+    throw new Error(`YIELD_LENS_BASE_URL must be https: ${shown}`);
   }
   if (!parsed.hostname) {
-    throw new Error(`YIELD_LENS_BASE_URL must include a host: ${url}`);
+    throw new Error(`YIELD_LENS_BASE_URL must include a host: ${shown}`);
   }
   if (parsed.username || parsed.password) {
-    throw new Error(`YIELD_LENS_BASE_URL must not embed credentials: ${url}`);
+    throw new Error(`YIELD_LENS_BASE_URL must not embed credentials: ${shown}`);
   }
   if (isNonPublicHostname(parsed.hostname)) {
-    throw new Error(`YIELD_LENS_BASE_URL must not target a private host: ${url}`);
+    throw new Error(`YIELD_LENS_BASE_URL must not target a private host: ${shown}`);
   }
   if (parsed.search || parsed.hash) {
     throw new Error(
-      `YIELD_LENS_BASE_URL must not include query or hash: ${url}`,
+      `YIELD_LENS_BASE_URL must not include query or hash: ${shown}`,
     );
   }
 }
