@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import {
+  DEFAULT_FETCH_TIMEOUT_MS,
   assertPublicHttpsBaseUrl,
   fetchJson,
   fmtLabel,
@@ -744,5 +745,45 @@ describe("redactUrlCredentials", () => {
       expect(message).not.toContain("hunter2");
       expect(message).toContain("***@");
     }
+  });
+});
+
+describe("fetch timeout", () => {
+  /** Never resolves on its own; rejects only when the request signal aborts. */
+  const hangingFetch = (seen: (AbortSignal | null | undefined)[]) =>
+    vi.fn(
+      (_input: RequestInfo | URL, init?: RequestInit) =>
+        new Promise<Response>((_resolve, reject) => {
+          seen.push(init?.signal);
+          init?.signal?.addEventListener("abort", () =>
+            reject(init.signal?.reason ?? new Error("aborted")),
+          );
+        }),
+    ) as unknown as typeof fetch;
+
+  it("fetchJson passes an abort signal and rejects when the deadline passes", async () => {
+    const seen: (AbortSignal | null | undefined)[] = [];
+    await expect(
+      fetchJson("https://mock.test/slow", hangingFetch(seen), 20),
+    ).rejects.toThrow();
+    expect(seen[0]).toBeInstanceOf(AbortSignal);
+    expect(seen[0]?.aborted).toBe(true);
+  });
+
+  it("summarizeYields falls back to empty arrays instead of hanging", async () => {
+    const seen: (AbortSignal | null | undefined)[] = [];
+    const summary = await summarizeYields({
+      baseUrl: "https://mock.test/base-defi",
+      fetchImpl: hangingFetch(seen),
+      timeoutMs: 20,
+    });
+    expect(summary.pools).toEqual([]);
+    expect(summary.lending).toEqual([]);
+    expect(seen).toHaveLength(2);
+  });
+
+  it("defaults to a finite per-request timeout", () => {
+    expect(Number.isFinite(DEFAULT_FETCH_TIMEOUT_MS)).toBe(true);
+    expect(DEFAULT_FETCH_TIMEOUT_MS).toBeGreaterThan(0);
   });
 });

@@ -195,12 +195,17 @@ function fmtNum(n: number, digits: number): string {
   return Number.isFinite(n) ? n.toFixed(digits) : "?";
 }
 
+/** Per-request timeout; Node fetch has no overall deadline (undici waits ~5 min). */
+export const DEFAULT_FETCH_TIMEOUT_MS = 10_000;
+
 export async function fetchJson<T>(
   url: string,
   fetchImpl: typeof fetch = fetch,
+  timeoutMs: number = DEFAULT_FETCH_TIMEOUT_MS,
 ): Promise<T> {
   const res = await fetchImpl(url, {
     headers: { accept: "application/json" },
+    signal: AbortSignal.timeout(timeoutMs),
   });
   if (!res.ok) {
     throw new Error(`HTTP ${res.status} for ${url}`);
@@ -212,16 +217,19 @@ export async function fetchJson<T>(
 export async function summarizeYields(opts?: {
   baseUrl?: string;
   fetchImpl?: typeof fetch;
+  timeoutMs?: number;
 }): Promise<YieldLensSummary> {
   const baseUrl = resolveBaseUrl(opts?.baseUrl);
   const fetchImpl = opts?.fetchImpl ?? fetch;
+  const timeoutMs = opts?.timeoutMs ?? DEFAULT_FETCH_TIMEOUT_MS;
 
   // TODOs point at real integrations; stubs keep the CLI useful offline.
   // Non-array / malformed JSON / null elements must not crash formatSummary later.
-  const pools = await fetchJson<unknown>(`${baseUrl}/pools`, fetchImpl)
+  // A hung endpoint times out (AbortSignal) and falls back to [] like other failures.
+  const pools = await fetchJson<unknown>(`${baseUrl}/pools`, fetchImpl, timeoutMs)
     .then((v) => normalizePools(v))
     .catch(() => [] as PoolSnapshot[]);
-  const lending = await fetchJson<unknown>(`${baseUrl}/lending`, fetchImpl)
+  const lending = await fetchJson<unknown>(`${baseUrl}/lending`, fetchImpl, timeoutMs)
     .then((v) => normalizeLending(v))
     .catch(() => [] as LendingSnapshot[]);
 
