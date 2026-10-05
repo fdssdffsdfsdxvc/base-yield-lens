@@ -88,6 +88,11 @@ try {
       `pack package.json license must be MIT: ${JSON.stringify(pkg.license)}`,
     );
   }
+  if (pkg.scripts?.prepack !== "npm run build") {
+    throw new Error(
+      `pack package.json scripts.prepack must build dist (npm pack/publish from a clean checkout): ${JSON.stringify(pkg.scripts?.prepack)}`,
+    );
+  }
   if (pkg.engines?.node !== ">=18") {
     throw new Error(
       `pack package.json engines.node must be ">=18": ${JSON.stringify(pkg.engines)}`,
@@ -97,7 +102,7 @@ try {
   console.log(
     "verify-pack: ok —",
     required.join(", "),
-    "+ bin + files + exports + license + engines",
+    "+ bin + files + exports + license + engines + prepack",
   );
 } finally {
   rmSync(dir, { recursive: true, force: true });
