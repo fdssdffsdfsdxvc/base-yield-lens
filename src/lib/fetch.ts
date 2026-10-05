@@ -206,6 +206,9 @@ export async function fetchJson<T>(
   const res = await fetchImpl(url, {
     headers: { accept: "application/json" },
     signal: AbortSignal.timeout(timeoutMs),
+    // Following redirects would bypass assertPublicHttpsBaseUrl (a public https
+    // root could 30x to http:// or a private/metadata host). Treat as failure.
+    redirect: "error",
   });
   if (!res.ok) {
     throw new Error(`HTTP ${res.status} for ${url}`);

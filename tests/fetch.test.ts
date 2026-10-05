@@ -1,3 +1,5 @@
+import { createServer } from "node:http";
+import type { AddressInfo } from "node:net";
 import { describe, expect, it, vi } from "vitest";
 import {
   DEFAULT_FETCH_TIMEOUT_MS,
@@ -785,5 +787,42 @@ describe("fetch timeout", () => {
   it("defaults to a finite per-request timeout", () => {
     expect(Number.isFinite(DEFAULT_FETCH_TIMEOUT_MS)).toBe(true);
     expect(DEFAULT_FETCH_TIMEOUT_MS).toBeGreaterThan(0);
+  });
+});
+
+describe("fetch redirects", () => {
+  it("fetchJson asks fetch not to follow redirects", async () => {
+    let init: RequestInit | undefined;
+    const fetchImpl = vi.fn(async (_input: RequestInfo | URL, i?: RequestInit) => {
+      init = i;
+      return new Response("[]", { status: 200 });
+    }) as unknown as typeof fetch;
+    await fetchJson("https://mock.test/pools", fetchImpl);
+    expect(init?.redirect).toBe("error");
+  });
+
+  it("real fetch rejects a 302 instead of following it to another target", async () => {
+    let followed = false;
+    const server = createServer((req, res) => {
+      if (req.url === "/target") {
+        followed = true;
+        res.setHeader("content-type", "application/json");
+        res.end('[{"protocol":"leak"}]');
+        return;
+      }
+      res.statusCode = 302;
+      res.setHeader("location", "/target");
+      res.end();
+    });
+    await new Promise<void>((r) => server.listen(0, "127.0.0.1", r));
+    const { port } = server.address() as AddressInfo;
+    try {
+      await expect(
+        fetchJson(`http://127.0.0.1:${port}/pools`),
+      ).rejects.toThrow();
+      expect(followed).toBe(false);
+    } finally {
+      await new Promise<void>((r) => server.close(() => r()));
+    }
   });
 });
