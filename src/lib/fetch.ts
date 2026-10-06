@@ -47,12 +47,57 @@ export function ipv4MappedAddress(hostname: string): string | null {
   return null;
 }
 
+/** Expand an IPv6 literal (optional brackets / dotted IPv4 tail) to 8 hextets, else null. */
+function expandIpv6(hostname: string): number[] | null {
+  let h = hostname.toLowerCase().replace(/^\[|\]$/g, "");
+  if (!h.includes(":")) return null;
+  const tail = /^(.*:)(\d{1,3}(?:\.\d{1,3}){3})$/.exec(h);
+  if (tail) {
+    const o = tail[2]!.split(".").map(Number);
+    if (o.some((n) => n > 255)) return null;
+    h = `${tail[1]}${((o[0]! << 8) | o[1]!).toString(16)}:${((o[2]! << 8) | o[3]!).toString(16)}`;
+  }
+  const halves = h.split("::");
+  if (halves.length > 2) return null;
+  const parse = (part: string) => (part === "" ? [] : part.split(":"));
+  const head = parse(halves[0]!);
+  const rest = halves.length === 2 ? parse(halves[1]!) : [];
+  const fill = halves.length === 2 ? 8 - head.length - rest.length : 0;
+  if (fill < 0 || (halves.length === 1 && head.length !== 8)) return null;
+  const groups = [...head, ...Array<string>(fill).fill("0"), ...rest];
+  if (groups.length !== 8 || groups.some((g) => !/^[0-9a-f]{1,4}$/.test(g))) return null;
+  return groups.map((g) => Number.parseInt(g, 16));
+}
+
+/**
+ * IPv4 address embedded in an IPv6 literal that reaches that IPv4 host:
+ * IPv4-mapped ::ffff:0:0/96, IPv4-translated ::ffff:0:0:0/96 (SIIT),
+ * deprecated IPv4-compatible ::/96, and NAT64 well-known prefix 64:ff9b::/96.
+ */
+export function embeddedIpv4Address(hostname: string): string | null {
+  const mapped = ipv4MappedAddress(hostname);
+  if (mapped) return mapped;
+  const g = expandIpv6(hostname);
+  if (!g) return null;
+  const zero = (from: number, to: number) => g.slice(from, to).every((x) => x === 0);
+  const v4 = `${g[6]! >> 8}.${g[6]! & 255}.${g[7]! >> 8}.${g[7]! & 255}`;
+  if (zero(0, 5) && g[5] === 0xffff) return v4; // uncompressed ::ffff:a.b.c.d
+  if (zero(0, 4) && g[4] === 0xffff && g[5] === 0) return v4; // ::ffff:0:a.b.c.d
+  if (g[0] === 0x64 && g[1] === 0xff9b && zero(2, 6)) return v4; // 64:ff9b::a.b.c.d
+  // ::a.b.c.d (but not :: / ::1, handled as unspecified/loopback).
+  if (zero(0, 6) && (g[6] !== 0 || g[7]! > 1)) return v4;
+  return null;
+}
+
 /** True for localhost / loopback / 0.0.0.0\/8 / RFC1918 / CGNAT / multicast / reserved 240/4 / IANA special-purpose (192.0.0/24, TEST-NETs, 198.18/15) / link-local / IPv6 ULA / .local/.localhost/.internal. */
 export function isNonPublicHostname(hostname: string): boolean {
   // Node may keep brackets on IPv6 hostnames ("[fd12::1]").
   const h = hostname.toLowerCase().replace(/\.$/, "").replace(/^\[|\]$/g, "");
-  const mapped = ipv4MappedAddress(h);
+  const mapped = embeddedIpv4Address(h);
   if (mapped) return isNonPublicHostname(mapped);
+  // NAT64 local-use prefix 64:ff9b:1::/48 (RFC 8215) is site-local by definition.
+  const v6 = expandIpv6(h);
+  if (v6 && v6[0] === 0x64 && v6[1] === 0xff9b && v6[2] === 1) return true;
   if (
     h === "localhost" ||
     h === "0.0.0.0" ||

@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   DEFAULT_FETCH_TIMEOUT_MS,
   assertPublicHttpsBaseUrl,
+  embeddedIpv4Address,
   fetchJson,
   fmtLabel,
   formatSummary,
@@ -517,6 +518,35 @@ describe("isNonPublicHostname", () => {
     expect(isNonPublicHostname("[::ffff:c0a8:101]")).toBe(true); // 192.168.1.1
     expect(isNonPublicHostname("::ffff:8.8.8.8")).toBe(false);
     expect(isNonPublicHostname("[::ffff:808:808]")).toBe(false); // 8.8.8.8
+  });
+
+  it("flags private IPv4 embedded via NAT64, IPv4-compatible, or IPv4-translated IPv6", () => {
+    // Node URL.hostname normalizes "::127.0.0.1" → "[::7f00:1]", etc.
+    expect(new URL("https://[::127.0.0.1]/").hostname).toBe("[::7f00:1]");
+    expect(embeddedIpv4Address("[::7f00:1]")).toBe("127.0.0.1");
+    expect(embeddedIpv4Address("[64:ff9b::a9fe:a9fe]")).toBe("169.254.169.254");
+    expect(embeddedIpv4Address("64:ff9b::10.0.0.1")).toBe("10.0.0.1");
+    expect(embeddedIpv4Address("[::ffff:0:a9fe:a9fe]")).toBe("169.254.169.254");
+    expect(embeddedIpv4Address("[0:0:0:0:0:ffff:7f00:1]")).toBe("127.0.0.1");
+    expect(embeddedIpv4Address("[2606:4700::1111]")).toBeNull();
+    expect(embeddedIpv4Address("[::1]")).toBeNull();
+    expect(embeddedIpv4Address("example.com")).toBeNull();
+    for (const host of [
+      "[::7f00:1]",
+      "[64:ff9b::a9fe:a9fe]",
+      "[64:ff9b::a00:1]",
+      "[::ffff:0:a9fe:a9fe]",
+      "[64:ff9b:1::a00:1]",
+      "[64:ff9b:1::808:808]",
+    ]) {
+      expect(isNonPublicHostname(host), host).toBe(true);
+      expect(() => assertPublicHttpsBaseUrl(`https://${host}/base-defi`)).toThrow(
+        /must not target a private host/,
+      );
+    }
+    // Public IPv4 behind NAT64 / ordinary global IPv6 stay allowed.
+    expect(isNonPublicHostname("[64:ff9b::808:808]")).toBe(false);
+    expect(isNonPublicHostname("[2606:4700::1111]")).toBe(false);
   });
 });
 
