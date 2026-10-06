@@ -17,6 +17,13 @@ describe("parseCliArgs", () => {
     expect(() => parseCliArgs(["foo"])).toThrow(/Unknown argument: foo/);
   });
 
+  it("ignores a bare -- end-of-options marker (pnpm cli -- --help)", () => {
+    expect(parseCliArgs(["--"])).toEqual({ help: false });
+    expect(parseCliArgs(["--", "--help"])).toEqual({ help: true });
+    expect(parseCliArgs(["--help", "--"])).toEqual({ help: true });
+    expect(() => parseCliArgs(["--", "--json"])).toThrow(/Unknown argument: --json/);
+  });
+
   it("rejects empty or whitespace-only arguments", () => {
     expect(() => parseCliArgs([""])).toThrow(/Empty argument is not allowed/);
     expect(() => parseCliArgs(["   "])).toThrow(/Empty argument is not allowed/);
