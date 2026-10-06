@@ -424,6 +424,20 @@ describe("assertPublicHttpsBaseUrl", () => {
       resolveBaseUrl("https://mock.test/base-defi?token=secret"),
     ).toThrow(/must not include query or hash/);
   });
+
+  it("rejects a bare trailing ? or # (empty query/hash still breaks path join)", () => {
+    // new URL(...).search/hash are "" here, but `${base}/pools` would become
+    // "https://mock.test/base-defi?/pools" (query) or "#/pools" (dropped fragment).
+    for (const u of [
+      "https://mock.test/base-defi?",
+      "https://mock.test/base-defi#",
+      "https://mock.test/base-defi?#",
+      "https://mock.test/?",
+    ]) {
+      expect(() => assertPublicHttpsBaseUrl(u)).toThrow(/must not include query or hash/);
+      expect(() => resolveBaseUrl(u)).toThrow(/must not include query or hash/);
+    }
+  });
 });
 
 describe("isNonPublicHostname", () => {

@@ -114,7 +114,9 @@ export function assertPublicHttpsBaseUrl(url: string): void {
   if (isNonPublicHostname(parsed.hostname)) {
     throw new Error(`YIELD_LENS_BASE_URL must not target a private host: ${shown}`);
   }
-  if (parsed.search || parsed.hash) {
+  // URL.search/hash are "" for a bare trailing "?" or "#", which would still
+  // turn `${base}/pools` into a query/fragment; check the raw string too.
+  if (parsed.search || parsed.hash || /[?#]/.test(url)) {
     throw new Error(
       `YIELD_LENS_BASE_URL must not include query or hash: ${shown}`,
     );
