@@ -475,6 +475,35 @@ describe("isNonPublicHostname", () => {
     expect(isNonPublicHostname("100.63.255.255")).toBe(false);
     expect(isNonPublicHostname("100.128.0.1")).toBe(false);
     expect(isNonPublicHostname("223.255.255.255")).toBe(false);
+    // Neighbours of the IANA special-purpose blocks stay public.
+    expect(isNonPublicHostname("192.0.1.1")).toBe(false);
+    expect(isNonPublicHostname("192.0.3.1")).toBe(false);
+    expect(isNonPublicHostname("198.17.255.255")).toBe(false);
+    expect(isNonPublicHostname("198.20.0.1")).toBe(false);
+    expect(isNonPublicHostname("198.51.101.1")).toBe(false);
+    expect(isNonPublicHostname("203.0.114.1")).toBe(false);
+    expect(isNonPublicHostname("2.4.0.1")).toBe(false);
+    expect(isNonPublicHostname("25.0.0.1")).toBe(false);
+  });
+
+  it("flags reserved 240/4 and IANA special-purpose non-global IPv4 blocks", () => {
+    for (const ip of [
+      "240.0.0.1",
+      "250.1.2.3",
+      "255.255.255.254",
+      "192.0.0.8",
+      "192.0.2.10",
+      "198.18.0.1",
+      "198.19.255.255",
+      "198.51.100.7",
+      "203.0.113.9",
+    ]) {
+      expect(isNonPublicHostname(ip), ip).toBe(true);
+    }
+    expect(() => assertPublicHttpsBaseUrl("https://198.18.0.1/base-defi")).toThrow(
+      /must not target a private host/,
+    );
+    expect(isNonPublicHostname("[::ffff:c612:1]")).toBe(true); // ::ffff:198.18.0.1
   });
 
   it("flags private IPv4-mapped IPv6 (::ffff:) hosts", () => {

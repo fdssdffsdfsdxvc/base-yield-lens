@@ -47,7 +47,7 @@ export function ipv4MappedAddress(hostname: string): string | null {
   return null;
 }
 
-/** True for localhost / loopback / 0.0.0.0\/8 / RFC1918 / CGNAT / multicast / link-local / IPv6 ULA / .local/.localhost/.internal. */
+/** True for localhost / loopback / 0.0.0.0\/8 / RFC1918 / CGNAT / multicast / reserved 240/4 / IANA special-purpose (192.0.0/24, TEST-NETs, 198.18/15) / link-local / IPv6 ULA / .local/.localhost/.internal. */
 export function isNonPublicHostname(hostname: string): boolean {
   // Node may keep brackets on IPv6 hostnames ("[fd12::1]").
   const h = hostname.toLowerCase().replace(/\.$/, "").replace(/^\[|\]$/g, "");
@@ -71,8 +71,14 @@ export function isNonPublicHostname(hostname: string): boolean {
   if (/^172\.(1[6-9]|2\d|3[0-1])\./.test(h)) return true;
   // CGNAT / shared address space (RFC 6598) 100.64.0.0/10
   if (/^100\.(6[4-9]|[7-9]\d|1[0-1]\d|12[0-7])\./.test(h)) return true;
-  // Multicast 224.0.0.0/4 and limited broadcast.
-  if (/^2(2[4-9]|3\d)\./.test(h) || h === "255.255.255.255") return true;
+  // Multicast 224.0.0.0/4, reserved 240.0.0.0/4, and limited broadcast.
+  if (/^2(2[4-9]|3\d|4\d|5[0-5])\./.test(h)) return true;
+  // IANA special-purpose, not globally reachable: IETF protocol assignments
+  // 192.0.0.0/24, TEST-NETs 192.0.2.0/24 / 198.51.100.0/24 / 203.0.113.0/24,
+  // benchmarking 198.18.0.0/15 (often used for internal/fake-IP DNS).
+  if (/^192\.0\.[02]\./.test(h)) return true;
+  if (/^198\.(1[89])\./.test(h) || /^198\.51\.100\./.test(h)) return true;
+  if (/^203\.0\.113\./.test(h)) return true;
   // IPv6 unique-local (fc00::/7) and link-local (fe80::/10)
   if (/^f[cd][0-9a-f]*:/i.test(h) || /^fe[89ab][0-9a-f]*:/i.test(h)) {
     return true;
