@@ -770,6 +770,30 @@ describe("normalizePools / normalizeLending", () => {
     expect(formatSummary(bad)).toContain("TVL=$?");
   });
 
+  it("rejects hex/octal/binary metric strings instead of reading them as decimal", async () => {
+    const fetchImpl = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      const body = url.endsWith("/pools")
+        ? [
+            { protocol: "x", poolId: "1", symbol: "A", tvlUsd: "0x1bc16d674ec80000", aprPct: "0b101", asOf: "t" },
+            { protocol: "x", poolId: "2", symbol: "B", tvlUsd: "1e6", aprPct: "-.5", asOf: "t" },
+          ]
+        : [{ protocol: "x", market: "Y", supplyApyPct: "0o17", borrowApyPct: "+4.", asOf: "t" }];
+      return new Response(JSON.stringify(body), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      });
+    }) as unknown as typeof fetch;
+    const s = await summarizeYields({ baseUrl: "https://mock.test/base-defi", fetchImpl });
+    expect(Number.isNaN(s.pools[0]!.tvlUsd)).toBe(true);
+    expect(Number.isNaN(s.pools[0]!.aprPct)).toBe(true);
+    expect(Number.isNaN(s.lending[0]!.supplyApyPct)).toBe(true);
+    expect(s.pools[1]!.tvlUsd).toBe(1_000_000);
+    expect(s.pools[1]!.aprPct).toBe(-0.5);
+    expect(s.lending[0]!.borrowApyPct).toBe(4);
+    expect(formatSummary(s)).toContain("[x] A TVL=$? APR=?%");
+  });
+
   it("coerces missing/blank/non-string labels to ?; non-numeric metrics to NaN→?", async () => {
     const fetchImpl = vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input);

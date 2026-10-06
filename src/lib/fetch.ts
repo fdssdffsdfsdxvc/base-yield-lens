@@ -211,13 +211,17 @@ export function fmtLabel(value: unknown): string {
   return "?";
 }
 
+/** Plain decimal (optional sign / fraction / exponent); excludes 0x/0o/0b radix forms. */
+const DECIMAL_STRING = /^[+-]?(?:\d+\.?\d*|\.\d+)(?:e[+-]?\d+)?$/i;
+
 /**
  * Coerce metrics for display. Numbers pass through (NaN/±Infinity → "?" via fmtNum).
- * Non-empty numeric strings are accepted; booleans/arrays/objects/blank → NaN.
+ * Non-empty decimal strings are accepted; hex/octal/binary strings (Number("0x10")
+ * === 16, e.g. raw on-chain quantities), booleans/arrays/objects/blank → NaN.
  */
 function asNumber(value: unknown): number {
   if (typeof value === "number") return value;
-  if (typeof value === "string" && value.trim() !== "") {
+  if (typeof value === "string" && DECIMAL_STRING.test(value.trim())) {
     const n = Number(value);
     return Number.isFinite(n) ? n : Number.NaN;
   }
