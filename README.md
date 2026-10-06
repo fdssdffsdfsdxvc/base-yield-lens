@@ -20,6 +20,8 @@ pnpm cli
 pnpm cli -- --help
 ```
 
+`pnpm typecheck` checks `src/` (build config) and also `tests/` + `vitest.config.ts` via `tsconfig.test.json` — vitest itself strips types without checking them.
+
 Unknown CLI flags and empty/whitespace-only arguments are rejected (exit 1). `--help` / `-h` print usage and exit 0. A bare `--` end-of-options marker (as forwarded by `pnpm cli -- --help`) is ignored.
 
 After `pnpm build`, the package bin is available as `base-yield-lens` (points at `dist/cli.js`). `main`/`types`/`exports` point at `dist/lib/fetch.js` for programmatic use. `pnpm verify-pack` runs `npm pack` and asserts `dist/cli.js` + `dist/cliArgs.js` + `dist/lib/fetch.js` + `.d.ts` plus `LICENSE`/`README.md` are present (and `src/`/`tests/`/`scripts/` are not), and that packed `bin`/`main`/`types`/`exports` still point at `dist` with `files` including `dist`, `license` is MIT, `engines.node` is `>=18`, and `prepack` runs the build. Because of `prepack`, `npm pack` / `npm publish` (and `pnpm verify-pack`) build `dist/` first, so a clean checkout never ships a tarball whose bin points at a missing file.
