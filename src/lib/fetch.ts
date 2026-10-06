@@ -107,6 +107,13 @@ export function isNonPublicHostname(hostname: string): boolean {
     return true;
   }
   if (h.endsWith(".local") || h.endsWith(".localhost") || h.endsWith(".internal")) return true;
+  // IPv6 unique-local (fc00::/7) and link-local (fe80::/10)
+  if (/^f[cd][0-9a-f]*:/i.test(h) || /^fe[89ab][0-9a-f]*:/i.test(h)) {
+    return true;
+  }
+  // Range checks below apply to IPv4 literals only; a DNS name such as
+  // "10.api.example.com" or "127.cdn.example" is not a private address.
+  if (!/^\d{1,3}(?:\.\d{1,3}){3}$/.test(h)) return false;
   if (/^127\./.test(h)) return true;
   // "This network" 0.0.0.0/8 (exact 0.0.0.0 already matched above).
   if (/^0\./.test(h)) return true;
@@ -124,10 +131,6 @@ export function isNonPublicHostname(hostname: string): boolean {
   if (/^192\.0\.[02]\./.test(h)) return true;
   if (/^198\.(1[89])\./.test(h) || /^198\.51\.100\./.test(h)) return true;
   if (/^203\.0\.113\./.test(h)) return true;
-  // IPv6 unique-local (fc00::/7) and link-local (fe80::/10)
-  if (/^f[cd][0-9a-f]*:/i.test(h) || /^fe[89ab][0-9a-f]*:/i.test(h)) {
-    return true;
-  }
   return false;
 }
 

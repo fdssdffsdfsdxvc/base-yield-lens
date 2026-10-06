@@ -487,6 +487,23 @@ describe("isNonPublicHostname", () => {
     expect(isNonPublicHostname("25.0.0.1")).toBe(false);
   });
 
+  it("does not mistake DNS names with numeric leading labels for private IPv4", () => {
+    for (const host of [
+      "10.api.example.com",
+      "127.cdn.example",
+      "192.168.example.org",
+      "172.16.example.net",
+      "240.example.net",
+      "100.64.example",
+    ]) {
+      expect(isNonPublicHostname(host), host).toBe(false);
+      expect(() => assertPublicHttpsBaseUrl(`https://${host}/base-defi`)).not.toThrow();
+    }
+    // Real IPv4 literals (incl. trailing dot) are still flagged.
+    expect(isNonPublicHostname("10.0.0.1.")).toBe(true);
+    expect(isNonPublicHostname("127.0.0.1")).toBe(true);
+  });
+
   it("flags reserved 240/4 and IANA special-purpose non-global IPv4 blocks", () => {
     for (const ip of [
       "240.0.0.1",
