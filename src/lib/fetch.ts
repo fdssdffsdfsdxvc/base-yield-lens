@@ -141,10 +141,17 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-/** Non-empty string label (trimmed), else "?" (avoids "undefined"/"null" in CLI output). */
+/**
+ * C0/DEL/C1 controls (ANSI escapes, CR/LF, BEL) and bidi overrides. Labels come
+ * from an untrusted API and are printed to a terminal: an ESC sequence could
+ * recolor/clear the screen, and CR/LF could forge extra summary lines.
+ */
+const UNSAFE_LABEL_CHARS = /[\u0000-\u001f\u007f-\u009f\u202a-\u202e\u2066-\u2069]+/g;
+
+/** Non-empty string label (controls → space, trimmed), else "?" (avoids "undefined"/"null" in CLI output). */
 export function fmtLabel(value: unknown): string {
   if (typeof value === "string") {
-    const trimmed = value.trim();
+    const trimmed = value.replace(UNSAFE_LABEL_CHARS, " ").trim();
     if (trimmed) return trimmed;
   }
   return "?";

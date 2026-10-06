@@ -501,6 +501,32 @@ describe("fmtLabel", () => {
     expect(fmtLabel(null)).toBe("?");
     expect(fmtLabel(12)).toBe("?");
   });
+
+  it("neutralizes terminal control characters from untrusted API labels", () => {
+    expect(fmtLabel("\u001b[31mevil\u001b[0m")).toBe("[31mevil [0m");
+    expect(fmtLabel("aero\r\nPools: 999")).toBe("aero Pools: 999");
+    expect(fmtLabel("A\u0007B\u007fC\u009bD")).toBe("A B C D");
+    expect(fmtLabel("USDC\u202egnp.exe")).toBe("USDC gnp.exe");
+    expect(fmtLabel("\u001b\u0007")).toBe("?");
+    expect(fmtLabel("WETH/USDC")).toBe("WETH/USDC");
+    const text = formatSummary({
+      chain: "base",
+      pools: [
+        {
+          protocol: "x\u001b[2J",
+          poolId: "1",
+          symbol: "A\nPools: 999",
+          tvlUsd: 1,
+          aprPct: 1,
+          asOf: "t",
+        },
+      ],
+      lending: [],
+      fetchedAt: "t",
+    });
+    expect(text).not.toMatch(/[\u0000-\u0009\u000b-\u001f\u007f]/);
+    expect(text.split("\n")).toHaveLength(4);
+  });
 });
 
 describe("normalizePools / normalizeLending", () => {
