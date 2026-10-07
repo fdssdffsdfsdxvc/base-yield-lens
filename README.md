@@ -20,6 +20,8 @@ pnpm cli
 pnpm cli -- --help
 ```
 
+CI (GitHub Actions, Node 22 LTS — Node 20 reached end-of-life in April 2026) runs `pnpm install --frozen-lockfile`, `pnpm typecheck`, `pnpm build`, `pnpm test`, and `pnpm verify-pack` on push/PR to `main`.
+
 `pnpm typecheck` checks `src/` (build config) and also `tests/` + `vitest.config.ts` via `tsconfig.test.json` — vitest itself strips types without checking them.
 
 Unknown CLI flags and empty/whitespace-only arguments are rejected (exit 1). `--help` / `-h` print usage and exit 0. A bare `--` end-of-options marker (as forwarded by `pnpm cli -- --help`) is ignored.
