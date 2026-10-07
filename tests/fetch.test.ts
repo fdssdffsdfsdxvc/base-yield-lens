@@ -565,6 +565,17 @@ describe("isNonPublicHostname", () => {
     expect(isNonPublicHostname("[64:ff9b::808:808]")).toBe(false);
     expect(isNonPublicHostname("[2606:4700::1111]")).toBe(false);
   });
+
+  it("flags IPv6 multicast ff00::/8 hosts like IPv4 multicast", () => {
+    for (const host of ["ff02::1", "[ff05::1:3]", "FF0E::101", "[ff02:0:0:0:0:0:0:1]"]) {
+      expect(isNonPublicHostname(host), host).toBe(true);
+    }
+    expect(() => assertPublicHttpsBaseUrl("https://[ff02::1]/base-defi")).toThrow(
+      /must not target a private host/,
+    );
+    // 00ff::/16 is not multicast (first hextet must be ffXX).
+    expect(isNonPublicHostname("[ff::1]")).toBe(false);
+  });
 });
 
 describe("fmtLabel", () => {

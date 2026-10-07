@@ -89,7 +89,7 @@ export function embeddedIpv4Address(hostname: string): string | null {
   return null;
 }
 
-/** True for localhost / loopback / 0.0.0.0\/8 / RFC1918 / CGNAT / multicast / reserved 240/4 / IANA special-purpose (192.0.0/24, TEST-NETs, 198.18/15) / link-local / IPv6 ULA / .local/.localhost/.internal. */
+/** True for localhost / loopback / 0.0.0.0\/8 / RFC1918 / CGNAT / multicast (IPv4 224/4, IPv6 ff00::/8) / reserved 240/4 / IANA special-purpose (192.0.0/24, TEST-NETs, 198.18/15) / link-local / IPv6 ULA / .local/.localhost/.internal. */
 export function isNonPublicHostname(hostname: string): boolean {
   // Node may keep brackets on IPv6 hostnames ("[fd12::1]").
   const h = hostname.toLowerCase().replace(/\.$/, "").replace(/^\[|\]$/g, "");
@@ -98,6 +98,8 @@ export function isNonPublicHostname(hostname: string): boolean {
   // NAT64 local-use prefix 64:ff9b:1::/48 (RFC 8215) is site-local by definition.
   const v6 = expandIpv6(h);
   if (v6 && v6[0] === 0x64 && v6[1] === 0xff9b && v6[2] === 1) return true;
+  // IPv6 multicast ff00::/8 (first hextet ffXX), the counterpart of IPv4 224/4.
+  if (v6 && v6[0]! >> 8 === 0xff) return true;
   if (
     h === "localhost" ||
     h === "0.0.0.0" ||
