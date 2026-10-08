@@ -89,10 +89,27 @@ export function embeddedIpv4Address(hostname: string): string | null {
   return null;
 }
 
+/**
+ * Canonicalize via the WHATWG URL host parser, as `new URL()` would: IPv4
+ * shorthand / hex / octal / integer forms ("127.1", "0x7f.0.0.1", "2130706433")
+ * become dotted quads, and IPv6 literals are compressed ("0:0:0:0:0:0:0:1" →
+ * "[::1]"). Unparseable input falls back to the lowercased original.
+ */
+function canonicalHostname(hostname: string): string {
+  const raw = hostname.trim().toLowerCase();
+  const bare = raw.replace(/^\[|\]$/g, "");
+  const host = bare.includes(":") ? `[${bare}]` : raw;
+  try {
+    return new URL(`http://${host}/`).hostname || raw;
+  } catch {
+    return raw;
+  }
+}
+
 /** True for localhost / loopback / 0.0.0.0\/8 / RFC1918 / CGNAT / multicast (IPv4 224/4, IPv6 ff00::/8) / reserved 240/4 / IANA special-purpose (192.0.0/24, TEST-NETs, 198.18/15) / link-local / IPv6 ULA / .local/.localhost/.internal. */
 export function isNonPublicHostname(hostname: string): boolean {
   // Node may keep brackets on IPv6 hostnames ("[fd12::1]").
-  const h = hostname.toLowerCase().replace(/\.$/, "").replace(/^\[|\]$/g, "");
+  const h = canonicalHostname(hostname).replace(/\.$/, "").replace(/^\[|\]$/g, "");
   const mapped = embeddedIpv4Address(h);
   if (mapped) return isNonPublicHostname(mapped);
   // NAT64 local-use prefix 64:ff9b:1::/48 (RFC 8215) is site-local by definition.

@@ -469,6 +469,21 @@ describe("isNonPublicHostname", () => {
     expect(isNonPublicHostname("255.255.255.255")).toBe(true);
   });
 
+  it("flags non-canonical IP literal spellings passed directly (not via URL)", () => {
+    // WHATWG URL canonicalizes these, but library callers may pass raw strings.
+    expect(isNonPublicHostname("127.1")).toBe(true);
+    expect(isNonPublicHostname("2130706433")).toBe(true);
+    expect(isNonPublicHostname("0x7f.0.0.1")).toBe(true);
+    expect(isNonPublicHostname("0177.0.0.1")).toBe(true);
+    expect(isNonPublicHostname("10.1")).toBe(true);
+    expect(isNonPublicHostname("0:0:0:0:0:0:0:1")).toBe(true);
+    expect(isNonPublicHostname("[::0001]")).toBe(true);
+    expect(isNonPublicHostname("0:0:0:0:0:0:0:0")).toBe(true);
+    // Still public after canonicalization; DNS names are untouched.
+    expect(isNonPublicHostname("8.8")).toBe(false);
+    expect(isNonPublicHostname("10.api.example.com")).toBe(false);
+  });
+
   it("allows public hostnames", () => {
     expect(isNonPublicHostname("api.example.invalid")).toBe(false);
     expect(isNonPublicHostname("mock.test")).toBe(false);
