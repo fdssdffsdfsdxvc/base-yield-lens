@@ -20,7 +20,7 @@ pnpm cli
 pnpm cli -- --help
 ```
 
-CI (GitHub Actions, Node 22 LTS — Node 20 reached end-of-life in April 2026) runs `pnpm install --frozen-lockfile`, `pnpm typecheck`, `pnpm build`, `pnpm test`, and `pnpm verify-pack` on push/PR to `main`.
+CI (GitHub Actions, Node 22 LTS — Node 20 reached end-of-life in April 2026; workflow actions pinned to their Node 24-based majors `actions/checkout@v5`, `actions/setup-node@v5`, `pnpm/action-setup@v5`) runs `pnpm install --frozen-lockfile`, `pnpm typecheck`, `pnpm build`, `pnpm test`, and `pnpm verify-pack` on push/PR to `main`.
 
 Dev tooling (vitest 4 / vite 8) needs Node `^20.19` or `>=22.12`; the built CLI/library itself still runs on Node `>=18` (`engines`). Run `pnpm audit` after dependency changes — vitest was bumped from 2.x to `^4.1.11` because 2.x pulled in advisories for vitest, vite, esbuild, tinypool and source-map-js.
 
