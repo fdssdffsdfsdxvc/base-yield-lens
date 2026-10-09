@@ -914,6 +914,12 @@ describe("redactUrlCredentials", () => {
     expect(redactUrlCredentials("https://a@b:c@mock.test/x")).toBe(
       "https://***@mock.test/x",
     );
+    expect(redactUrlCredentials("//user:hunter2@mock.test/x")).toBe(
+      "//***@mock.test/x",
+    );
+    expect(redactUrlCredentials("\\user:hunter2@mock.test\\x")).toBe(
+      "\\***@mock.test\\x",
+    );
     expect(redactUrlCredentials("https://mock.test/a@b")).toBe(
       "https://mock.test/a@b",
     );
@@ -925,6 +931,7 @@ describe("redactUrlCredentials", () => {
       "https://user:hunter2@mock.test/base-defi",
       "http://user:hunter2@mock.test/base-defi",
       "https://user:hunter2@127.0.0.1/base-defi",
+      "//user:hunter2@mock.test/base-defi",
     ];
     for (const url of cases) {
       let message = "";

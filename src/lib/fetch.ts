@@ -155,11 +155,16 @@ export function isNonPublicHostname(hostname: string): boolean {
 
 /**
  * Mask URL userinfo (`user:pass@`) so error messages never echo secrets to
- * stderr/logs. Works on unparseable input too (regex, not URL parsing).
+ * stderr/logs. Works on unparseable input too (regex, not URL parsing), and on
+ * scheme-less / protocol-relative forms (`//u:p@h`, `\u:p@h`) that a scheme
+ * anchored pattern would miss.
  */
 export function redactUrlCredentials(url: string): string {
   // WHATWG URL accepts "https:u:p@h" and backslashes for special schemes too.
-  return url.replace(/^(\s*[a-z][a-z0-9+.-]*:[\/\\]*)[^/\\?#]*@/i, "$1***@");
+  return url.replace(
+    /^(\s*(?:[a-z][a-z0-9+.-]*:[\/\\]*|[\/\\]+))[^/\\?#]*@/i,
+    "$1***@",
+  );
 }
 
 /**
