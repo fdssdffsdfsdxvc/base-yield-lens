@@ -629,6 +629,30 @@ describe("fmtLabel", () => {
     expect(text).not.toMatch(/[\u0000-\u0009\u000b-\u001f\u007f]/);
     expect(text.split("\n")).toHaveLength(4);
   });
+
+  it("neutralizes Unicode line/paragraph separators from untrusted API labels", () => {
+    // U+2028/U+2029 are line boundaries for terminals and log viewers, so they
+    // forge extra summary lines just like CR/LF do.
+    expect(fmtLabel("aerodrome\u2028Pools: 999")).toBe("aerodrome Pools: 999");
+    expect(fmtLabel("USDC\u2029Lending: 1")).toBe("USDC Lending: 1");
+    const text = formatSummary({
+      chain: "base",
+      pools: [
+        {
+          protocol: "aave-v3",
+          poolId: "0x1",
+          symbol: "WETH/USDC\u2028Pools: 999\u2029Lending: 1",
+          tvlUsd: 1,
+          aprPct: 1,
+          asOf: "t",
+        },
+      ],
+      lending: [],
+      fetchedAt: "t",
+    });
+    expect(text).not.toMatch(/[\u2028\u2029]/);
+    expect(text.split("\n")).toHaveLength(4);
+  });
 });
 
 describe("normalizePools / normalizeLending", () => {

@@ -215,11 +215,12 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 /**
- * C0/DEL/C1 controls (ANSI escapes, CR/LF, BEL) and bidi overrides. Labels come
- * from an untrusted API and are printed to a terminal: an ESC sequence could
- * recolor/clear the screen, and CR/LF could forge extra summary lines.
+ * C0/DEL/C1 controls (ANSI escapes, CR/LF, BEL), Unicode line/paragraph
+ * separators, and bidi overrides. Labels come from an untrusted API and are
+ * printed to a terminal: an ESC sequence could recolor/clear the screen, and
+ * CR/LF/U+2028/U+2029 could forge extra summary lines.
  */
-const UNSAFE_LABEL_CHARS = /[\u0000-\u001f\u007f-\u009f\u202a-\u202e\u2066-\u2069]+/g;
+const UNSAFE_LABEL_CHARS = /[\u0000-\u001f\u007f-\u009f\u2028\u2029\u202a-\u202e\u2066-\u2069]+/g;
 
 /** Non-empty string label (controls → space, trimmed), else "?" (avoids "undefined"/"null" in CLI output). */
 export function fmtLabel(value: unknown): string {
