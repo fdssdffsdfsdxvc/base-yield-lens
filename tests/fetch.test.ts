@@ -461,6 +461,15 @@ describe("isNonPublicHostname", () => {
     // Node URL.hostname keeps brackets for IPv6 literals.
     expect(isNonPublicHostname("[fd12::1]")).toBe(true);
     expect(isNonPublicHostname("[fe80::1]")).toBe(true);
+    // Deprecated IPv6 site-local (fec0::/10, RFC 3879) alongside ULA/link-local.
+    expect(isNonPublicHostname("fec0::1")).toBe(true);
+    expect(isNonPublicHostname("[fec0:0:0:1::]")).toBe(true);
+    expect(isNonPublicHostname("feff::1")).toBe(true);
+    expect(() => assertPublicHttpsBaseUrl("https://[fec0::1]/base-defi")).toThrow(
+      /must not target a private host/,
+    );
+    // fe7f:: is below fe80::/10 and stays public.
+    expect(isNonPublicHostname("[fe7f::1]")).toBe(false);
     expect(isNonPublicHostname("[::1]")).toBe(true);
     expect(isNonPublicHostname("::")).toBe(true);
     expect(isNonPublicHostname("[::]")).toBe(true);
