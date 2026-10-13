@@ -476,6 +476,10 @@ describe("isNonPublicHostname", () => {
     expect(isNonPublicHostname("224.0.0.1")).toBe(true);
     expect(isNonPublicHostname("239.255.255.255")).toBe(true);
     expect(isNonPublicHostname("255.255.255.255")).toBe(true);
+    expect(isNonPublicHostname("ff00::1")).toBe(true);
+    expect(isNonPublicHostname("ff02::1")).toBe(true);
+    expect(isNonPublicHostname("ff02::fb")).toBe(true);
+    expect(isNonPublicHostname("[ff05::1:3]")).toBe(true);
   });
 
   it("flags non-canonical IP literal spellings passed directly (not via URL)", () => {
