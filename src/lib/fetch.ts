@@ -128,7 +128,7 @@ export function isNonPublicHostname(hostname: string): boolean {
   if (h.endsWith(".local") || h.endsWith(".localhost") || h.endsWith(".internal")) return true;
   // IPv6 unique-local (fc00::/7), deprecated site-local (fec0::/10, RFC 3879),
   // and link-local (fe80::/10)
-  if (/^f[cd][0-9a-f]*:/i || /^fe[89a-f][0-9a-f]*:/i) {
+  if (/^f[cd][0-9a-f]*:/i.test(h) || /^fe[89a-f][0-9a-f]*:/i.test(h)) {
     return true;
   }
   // Range checks below apply to IPv4 literals only; a DNS name such as
