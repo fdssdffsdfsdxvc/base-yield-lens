@@ -314,7 +314,9 @@ export async function fetchJson<T>(
     redirect: "error",
   });
   if (!res.ok) {
-    throw new Error(`HTTP ${res.status} for ${url}`);
+    // Mask embedded userinfo so a caller-supplied URL cannot leak secrets in
+    // the error (summarizeYields validates its base, but fetchJson is public).
+    throw new Error(`HTTP ${res.status} for ${redactUrlCredentials(url)}`);
   }
   return (await res.json()) as T;
 }

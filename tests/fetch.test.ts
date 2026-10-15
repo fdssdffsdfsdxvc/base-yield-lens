@@ -226,6 +226,21 @@ describe("fetchJson", () => {
     ).rejects.toThrow("HTTP 404 for https://mock.test/missing");
   });
 
+  it("masks embedded credentials in HTTP error messages", async () => {
+    const fetchImpl = vi.fn(
+      async () => new Response("nope", { status: 403 }),
+    ) as unknown as typeof fetch;
+
+    let message = "";
+    try {
+      await fetchJson("https://user:hunter2@mock.test/secret", fetchImpl);
+    } catch (err) {
+      message = (err as Error).message;
+    }
+    expect(message).toBe("HTTP 403 for https://***@mock.test/secret");
+    expect(message).not.toContain("hunter2");
+  });
+
   it("returns parsed JSON for OK responses", async () => {
     const fetchImpl = vi.fn(
       async () =>
