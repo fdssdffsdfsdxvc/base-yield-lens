@@ -162,8 +162,12 @@ export function isNonPublicHostname(hostname: string): boolean {
  */
 export function redactUrlCredentials(url: string): string {
   // WHATWG URL accepts "https:u:p@h" and backslashes for special schemes too.
+  // Only "/" (and "\") bounds the authority: treat "?"/"#" as part of a malformed
+  // userinfo rather than a boundary, so a password containing them (which would
+  // otherwise abort the match) is still masked. A credential-free host with an
+  // "@" in its query/fragment is at worst over-masked, which is safe for a message.
   return url.replace(
-    /^(\s*(?:[a-z][a-z0-9+.-]*:[\/\\]*|[\/\\]+))[^/\\?#]*@/i,
+    /^(\s*(?:[a-z][a-z0-9+.-]*:[\/\\]*|[\/\\]+))[^/\\]*@/i,
     "$1***@",
   );
 }

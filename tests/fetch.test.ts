@@ -936,17 +936,27 @@ describe("redactUrlCredentials", () => {
     expect(redactUrlCredentials("https://mock.test/a@b")).toBe(
       "https://mock.test/a@b",
     );
+    // Malformed userinfo containing "?"/"#" must not abort masking the secret.
+    expect(redactUrlCredentials("https://user:hun?ter@mock.test/x")).toBe(
+      "https://***@mock.test/x",
+    );
+    expect(redactUrlCredentials("https://user:hun#ter@mock.test/x")).toBe(
+      "https://***@mock.test/x",
+    );
     expect(redactUrlCredentials("not-a-url")).toBe("not-a-url");
   });
 
   it("never echoes embedded passwords in YIELD_LENS_BASE_URL errors", () => {
-    const cases = [
-      "https://user:hunter2@mock.test/base-defi",
-      "http://user:hunter2@mock.test/base-defi",
-      "https://user:hunter2@127.0.0.1/base-defi",
-      "//user:hunter2@mock.test/base-defi",
+    const cases: [string, string][] = [
+      ["https://user:hunter2@mock.test/base-defi", "hunter2"],
+      ["http://user:hunter2@mock.test/base-defi", "hunter2"],
+      ["https://user:hunter2@127.0.0.1/base-defi", "hunter2"],
+      ["//user:hunter2@mock.test/base-defi", "hunter2"],
+      // Delimiters inside a malformed password must not unmask it.
+      ["https://user:hun?ter2@mock.test/base-defi", "hun?ter2"],
+      ["https://user:hun#ter2@mock.test/base-defi", "hun#ter2"],
     ];
-    for (const url of cases) {
+    for (const [url, secret] of cases) {
       let message = "";
       try {
         resolveBaseUrl(url);
@@ -954,7 +964,7 @@ describe("redactUrlCredentials", () => {
         message = (err as Error).message;
       }
       expect(message).toMatch(/^YIELD_LENS_BASE_URL must/);
-      expect(message).not.toContain("hunter2");
+      expect(message).not.toContain(secret);
       expect(message).toContain("***@");
     }
   });
