@@ -594,6 +594,23 @@ describe("isNonPublicHostname", () => {
     expect(isNonPublicHostname("[2606:4700::1111]")).toBe(false);
   });
 
+  it("flags private IPv4 embedded in 6to4 2002::/16 addresses", () => {
+    // 6to4 2002:VVVV:WWWW::/48 encodes the IPv4 gateway in hextets 1-2; a
+    // private embedded address is an SSRF bypass past the plain IPv4 checks.
+    expect(embeddedIpv4Address("[2002:7f00:1::]")).toBe("127.0.0.1");
+    expect(embeddedIpv4Address("[2002:c0a8:101::1]")).toBe("192.168.1.1");
+    expect(embeddedIpv4Address("[2002:a9fe:a9fe::]")).toBe("169.254.169.254");
+    for (const host of ["[2002:7f00:1::]", "[2002:c0a8:101::1]", "[2002:a00:1::]"]) {
+      expect(isNonPublicHostname(host), host).toBe(true);
+      expect(() => assertPublicHttpsBaseUrl(`https://${host}/base-defi`)).toThrow(
+        /must not target a private host/,
+      );
+    }
+    // Public IPv4 embedded in 6to4 stays allowed.
+    expect(embeddedIpv4Address("[2002:808:808::1]")).toBe("8.8.8.8");
+    expect(isNonPublicHostname("[2002:808:808::1]")).toBe(false);
+  });
+
   it("flags IPv6 multicast ff00::/8 hosts like IPv4 multicast", () => {
     for (const host of ["ff02::1", "[ff05::1:3]", "FF0E::101", "[ff02:0:0:0:0:0:0:1]"]) {
       expect(isNonPublicHostname(host), host).toBe(true);

@@ -72,7 +72,8 @@ function expandIpv6(hostname: string): number[] | null {
 /**
  * IPv4 address embedded in an IPv6 literal that reaches that IPv4 host:
  * IPv4-mapped ::ffff:0:0/96, IPv4-translated ::ffff:0:0:0/96 (SIIT),
- * deprecated IPv4-compatible ::/96, and NAT64 well-known prefix 64:ff9b::/96.
+ * deprecated IPv4-compatible ::/96, NAT64 well-known prefix 64:ff9b::/96,
+ * and 6to4 2002::/16 (embedded tunnel/IPv4 gateway in hextets 1-2).
  */
 export function embeddedIpv4Address(hostname: string): string | null {
   const mapped = ipv4MappedAddress(hostname);
@@ -84,6 +85,11 @@ export function embeddedIpv4Address(hostname: string): string | null {
   if (zero(0, 5) && g[5] === 0xffff) return v4; // uncompressed ::ffff:a.b.c.d
   if (zero(0, 4) && g[4] === 0xffff && g[5] === 0) return v4; // ::ffff:0:a.b.c.d
   if (g[0] === 0x64 && g[1] === 0xff9b && zero(2, 6)) return v4; // 64:ff9b::a.b.c.d
+  // 6to4 2002:VVVV:WWWW::/48: the IPv4 gateway is in hextets 1-2. A private
+  // embedded address (e.g. 2002:7f00:1::) is an SSRF bypass past v4 checks.
+  if (g[0] === 0x2002) {
+    return `${g[1]! >> 8}.${g[1]! & 255}.${g[2]! >> 8}.${g[2]! & 255}`;
+  }
   // ::a.b.c.d (but not :: / ::1, handled as unspecified/loopback).
   if (zero(0, 6) && (g[6] !== 0 || g[7]! > 1)) return v4;
   return null;
