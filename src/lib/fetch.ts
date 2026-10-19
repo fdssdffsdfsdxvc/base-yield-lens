@@ -99,12 +99,22 @@ export function embeddedIpv4Address(hostname: string): string | null {
  * Canonicalize via the WHATWG URL host parser, as `new URL()` would: IPv4
  * shorthand / hex / octal / integer forms ("127.1", "0x7f.0.0.1", "2130706433")
  * become dotted quads, and IPv6 literals are compressed ("0:0:0:0:0:0:0:1" →
- * "[::1]"). Unparseable input falls back to the lowercased original.
+ * "[::1]"). An optional authority port ("host:443", "[v6]:443") is dropped first
+ * (a Host header / `URL.host` value would otherwise pass as a DNS name).
+ * Unparseable input falls back to the lowercased original.
  */
 function canonicalHostname(hostname: string): string {
   const raw = hostname.trim().toLowerCase();
-  const bare = raw.replace(/^\[|\]$/g, "");
-  const host = bare.includes(":") ? `[${bare}]` : raw;
+  const bracketed = /^\[([^\]]+)\](?::\d{1,5})?$/.exec(raw);
+  // Exactly one colon separates host from port here, so a bare IPv6 hextet
+  // list ("2001:db8::1", "0:0:0:0:0:0:0:1") is never mistaken for a port.
+  const host0 = bracketed
+    ? bracketed[1]!
+    : /^[^[\]:]+:\d{1,5}$/.test(raw)
+      ? raw.slice(0, raw.lastIndexOf(":"))
+      : raw;
+  const bare = host0.replace(/^\[|\]$/g, "");
+  const host = bare.includes(":") ? `[${bare}]` : host0;
   try {
     return new URL(`http://${host}/`).hostname || raw;
   } catch {
@@ -112,7 +122,7 @@ function canonicalHostname(hostname: string): string {
   }
 }
 
-/** True for localhost / loopback / 0.0.0.0\/8 / RFC1918 / CGNAT / multicast (IPv4 224/4, IPv6 ff00::/8) / reserved 240/4 / IANA special-purpose (192.0.0/24, TEST-NETs, 198.18/15) / link-local (fe80::/10) / IPv6 site-local (fec0::/10) / IPv6 ULA (fc00::/7) / .local/.localhost/.internal. */
+/** True for localhost / loopback / 0.0.0.0\/8 / RFC1918 / CGNAT / multicast (IPv4 224/4, IPv6 ff00::/8) / reserved 240/4 / IANA special-purpose (192.0.0/24, TEST-NETs, 198.18/15) / link-local (fe80::/10) / IPv6 site-local (fec0::/10) / IPv6 ULA (fc00::/7) / .local/.localhost/.internal. Accepts a bare hostname or a `host:port` authority (port ignored). */
 export function isNonPublicHostname(hostname: string): boolean {
   // Node may keep brackets on IPv6 hostnames ("[fd12::1]").
   const h = canonicalHostname(hostname).replace(/\.$/, "").replace(/^\[|\]$/g, "");

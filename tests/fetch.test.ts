@@ -512,6 +512,27 @@ describe("isNonPublicHostname", () => {
     expect(isNonPublicHostname("10.api.example.com")).toBe(false);
   });
 
+  it("accepts host:port authorities (Host header / URL.host) and ignores the port", () => {
+    // A bare hostname check must not pass "127.0.0.1:3000" off as a DNS name.
+    expect(isNonPublicHostname("127.0.0.1:8080")).toBe(true);
+    expect(isNonPublicHostname("10.0.0.1:443")).toBe(true);
+    expect(isNonPublicHostname("169.254.169.254:80")).toBe(true);
+    expect(isNonPublicHostname("0.0.0.0:80")).toBe(true);
+    expect(isNonPublicHostname("[127.0.0.1]:8080")).toBe(true);
+    expect(isNonPublicHostname("127.1:8080")).toBe(true);
+    expect(isNonPublicHostname("localhost:3000")).toBe(true);
+    expect(isNonPublicHostname("printer.local:8080")).toBe(true);
+    expect(isNonPublicHostname("[fd12::1]:8080")).toBe(true);
+    expect(isNonPublicHostname("[::1]:443")).toBe(true);
+    expect(isNonPublicHostname("metadata.google.internal:8080")).toBe(true);
+    // Public hosts with a port stay public, and a bare IPv6 hextet list is
+    // never mistaken for host:port (multiple colons, or a bracketed literal).
+    expect(isNonPublicHostname("example.com:8080")).toBe(false);
+    expect(isNonPublicHostname("2606:4700::1111")).toBe(false);
+    expect(isNonPublicHostname("[2606:4700::1111]:443")).toBe(false);
+    expect(isNonPublicHostname("0:0:0:0:0:0:0:1")).toBe(true);
+  });
+
   it("allows public hostnames", () => {
     expect(isNonPublicHostname("api.example.invalid")).toBe(false);
     expect(isNonPublicHostname("mock.test")).toBe(false);
