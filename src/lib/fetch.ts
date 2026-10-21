@@ -122,7 +122,7 @@ function canonicalHostname(hostname: string): string {
   }
 }
 
-/** True for localhost / loopback / 0.0.0.0\/8 / RFC1918 / CGNAT / multicast (IPv4 224/4, IPv6 ff00::/8) / reserved 240/4 / IANA special-purpose (192.0.0/24, TEST-NETs, 198.18/15) / link-local (fe80::/10) / IPv6 site-local (fec0::/10) / IPv6 ULA (fc00::/7) / .local/.localhost/.internal. Accepts a bare hostname or a `host:port` authority (port ignored). */
+/** True for localhost / loopback / 0.0.0.0\/8 / RFC1918 / CGNAT / multicast (IPv4 224/4, IPv6 ff00::/8) / reserved 240/4 / IANA special-purpose (192.0.0/24, TEST-NETs, 198.18/15) / link-local (fe80::/10) / IPv6 site-local (fec0::/10) / IPv6 ULA (fc00::/7) / .local/.localhost/.internal/home.arpa (RFC 8375). Accepts a bare hostname or a `host:port` authority (port ignored). */
 export function isNonPublicHostname(hostname: string): boolean {
   // Node may keep brackets on IPv6 hostnames ("[fd12::1]").
   const h = canonicalHostname(hostname).replace(/\.$/, "").replace(/^\[|\]$/g, "");
@@ -142,6 +142,9 @@ export function isNonPublicHostname(hostname: string): boolean {
     return true;
   }
   if (h.endsWith(".local") || h.endsWith(".localhost") || h.endsWith(".internal")) return true;
+  // RFC 8375 special-use domain for home networks; never publicly resolvable,
+  // and commonly served by home routers/DHCP like .local is.
+  if (h === "home.arpa" || h.endsWith(".home.arpa")) return true;
   // IPv6 unique-local (fc00::/7), deprecated site-local (fec0::/10, RFC 3879),
   // and link-local (fe80::/10)
   if (/^f[cd][0-9a-f]*:/i.test(h) || /^fe[89a-f][0-9a-f]*:/i.test(h)) {

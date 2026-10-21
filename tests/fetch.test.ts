@@ -471,6 +471,14 @@ describe("isNonPublicHostname", () => {
     expect(isNonPublicHostname("printer.local")).toBe(true);
     expect(isNonPublicHostname("api.localhost")).toBe(true);
     expect(isNonPublicHostname("metadata.google.internal")).toBe(true);
+    // RFC 8375 home.arpa special-use domain (home networks; not publicly resolvable).
+    expect(isNonPublicHostname("home.arpa")).toBe(true);
+    expect(isNonPublicHostname("foo.home.arpa")).toBe(true);
+    expect(isNonPublicHostname("HOME.ARPA.")).toBe(true);
+    expect(isNonPublicHostname("[home.arpa]:8080")).toBe(true);
+    expect(() => assertPublicHttpsBaseUrl("https://home.arpa/base-defi")).toThrow(
+      /must not target a private host/,
+    );
     expect(isNonPublicHostname("fd12::1")).toBe(true);
     expect(isNonPublicHostname("fe80::1")).toBe(true);
     // Node URL.hostname keeps brackets for IPv6 literals.
@@ -536,6 +544,9 @@ describe("isNonPublicHostname", () => {
   it("allows public hostnames", () => {
     expect(isNonPublicHostname("api.example.invalid")).toBe(false);
     expect(isNonPublicHostname("mock.test")).toBe(false);
+    // Neighbouring arpa names are not the RFC 8375 home.arpa domain.
+    expect(isNonPublicHostname("example.arpa")).toBe(false);
+    expect(isNonPublicHostname("not-home.arpa")).toBe(false);
     expect(isNonPublicHostname("172.32.0.1")).toBe(false);
     expect(isNonPublicHostname("100.63.255.255")).toBe(false);
     expect(isNonPublicHostname("100.128.0.1")).toBe(false);
