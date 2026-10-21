@@ -3,6 +3,7 @@ import type { AddressInfo } from "node:net";
 import { describe, expect, it, vi } from "vitest";
 import {
   DEFAULT_FETCH_TIMEOUT_MS,
+  MAX_LABEL_LENGTH,
   assertPublicHttpsBaseUrl,
   embeddedIpv4Address,
   fetchJson,
@@ -679,6 +680,21 @@ describe("fmtLabel", () => {
     expect(fmtLabel("")).toBe("?");
     expect(fmtLabel(null)).toBe("?");
     expect(fmtLabel(12)).toBe("?");
+  });
+
+  it("caps oversized labels so a huge upstream string cannot flood output", () => {
+    expect(MAX_LABEL_LENGTH).toBeGreaterThan(0);
+    const long = "A".repeat(MAX_LABEL_LENGTH + 50);
+    const capped = fmtLabel(long);
+    expect(capped).toHaveLength(MAX_LABEL_LENGTH);
+    expect(capped.endsWith("…")).toBe(true);
+    expect(capped.startsWith("A".repeat(10))).toBe(true);
+    // Exactly at the limit: untouched, no ellipsis.
+    const exact = "B".repeat(MAX_LABEL_LENGTH);
+    expect(fmtLabel(exact)).toBe(exact);
+    // Capping happens after control-char replacement + trim.
+    const padded = `\n${"C".repeat(MAX_LABEL_LENGTH + 10)}\n`;
+    expect(fmtLabel(padded)).toHaveLength(MAX_LABEL_LENGTH);
   });
 
   it("neutralizes terminal control characters from untrusted API labels", () => {

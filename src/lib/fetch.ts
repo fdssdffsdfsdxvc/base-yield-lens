@@ -251,11 +251,17 @@ function isRecord(value: unknown): value is Record<string, unknown> {
  */
 const UNSAFE_LABEL_CHARS = /[\u0000-\u001f\u007f-\u009f\u2028\u2029\u202a-\u202e\u2066-\u2069]+/g;
 
-/** Non-empty string label (controls → space, trimmed), else "?" (avoids "undefined"/"null" in CLI output). */
+/** Cap on rendered label length: a huge upstream string must not flood stdout/logs. */
+export const MAX_LABEL_LENGTH = 128;
+
+/** Non-empty string label (controls → space, trimmed, hard-capped length), else "?" (avoids "undefined"/"null" in CLI output). */
 export function fmtLabel(value: unknown): string {
   if (typeof value === "string") {
     const trimmed = value.replace(UNSAFE_LABEL_CHARS, " ").trim();
-    if (trimmed) return trimmed;
+    if (!trimmed) return "?";
+    return trimmed.length > MAX_LABEL_LENGTH
+      ? `${trimmed.slice(0, MAX_LABEL_LENGTH - 1)}…`
+      : trimmed;
   }
   return "?";
 }
