@@ -1073,6 +1073,14 @@ describe("redactUrlCredentials", () => {
     expect(redactUrlCredentials("https://user:hun#ter@mock.test/x")).toBe(
       "https://***@mock.test/x",
     );
+    // "\" is a path separator for special schemes, so a password containing one
+    // makes the whole URL unparseable — it must not abort masking either.
+    expect(redactUrlCredentials("https://user:p\\ass@mock.test/x")).toBe(
+      "https://***@mock.test/x",
+    );
+    expect(redactUrlCredentials("https://us\\er:hunter2@mock.test/x")).toBe(
+      "https://***@mock.test/x",
+    );
     expect(redactUrlCredentials("not-a-url")).toBe("not-a-url");
   });
 
@@ -1085,6 +1093,9 @@ describe("redactUrlCredentials", () => {
       // Delimiters inside a malformed password must not unmask it.
       ["https://user:hun?ter2@mock.test/base-defi", "hun?ter2"],
       ["https://user:hun#ter2@mock.test/base-defi", "hun#ter2"],
+      // A "\" in the password makes the URL unparseable, so the raw string is
+      // echoed by the "valid https URL" error and must still be masked.
+      ["https://user:p\\ass@mock.test/base-defi", "p\\ass"],
     ];
     for (const [url, secret] of cases) {
       let message = "";
