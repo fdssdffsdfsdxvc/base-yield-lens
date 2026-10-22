@@ -677,11 +677,36 @@ describe("isNonPublicHostname", () => {
       );
     }
     // A public Teredo server address (8.8.8.8) stays allowed, and a 2001:db8::/32
-    // address (hextet 1 ≠ 0) is not the Teredo /32 prefix at all.
+    // address (hextet 1 ≠ 0) is not the Teredo /32 prefix at all — it is flagged
+    // separately below as a documentation prefix, not as an embedded IPv4.
     expect(embeddedIpv4Address("[2001:0:808:808::]")).toBe("8.8.8.8");
     expect(isNonPublicHostname("[2001:0:808:808::]")).toBe(false);
     expect(embeddedIpv4Address("[2001:db8::1]")).toBeNull();
-    expect(isNonPublicHostname("[2001:db8::1]")).toBe(false);
+    expect(isNonPublicHostname("[2001:db8::1]")).toBe(true);
+  });
+
+  it("flags IPv6 documentation prefixes 2001:db8::/32 and 3fff::/20", () => {
+    // IANA special-purpose, not globally reachable (RFC 3849 / RFC 9637) — the
+    // IPv6 counterpart of the TEST-NET blocks already rejected for IPv4.
+    for (const host of [
+      "[2001:db8::1]",
+      "2001:0db8:0000::1",
+      "[2001:db8:1:2::3]",
+      "[2001:db8::1]:8080",
+      "[3fff::1]",
+      "[3fff:fff:ffff::1]",
+    ]) {
+      expect(isNonPublicHostname(host), host).toBe(true);
+    }
+    expect(() => assertPublicHttpsBaseUrl("https://[2001:db8::1]/base-defi")).toThrow(
+      /must not target a private host/,
+    );
+    // Neighbours of both /20s stay public.
+    expect(isNonPublicHostname("[2001:db7::1]")).toBe(false);
+    expect(isNonPublicHostname("[2001:db9::1]")).toBe(false);
+    expect(isNonPublicHostname("[3ffe::1]")).toBe(false);
+    expect(isNonPublicHostname("[3fff:1000::1]")).toBe(false);
+    expect(isNonPublicHostname("[4000::1]")).toBe(false);
   });
 
   it("flags IPv6 multicast ff00::/8 hosts like IPv4 multicast", () => {
