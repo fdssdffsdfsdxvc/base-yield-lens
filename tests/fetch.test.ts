@@ -669,6 +669,31 @@ describe("isNonPublicHostname", () => {
     // 00ff::/16 is not multicast (first hextet must be ffXX).
     expect(isNonPublicHostname("[ff::1]")).toBe(false);
   });
+
+  it("flags scoped IPv6 literals that carry an RFC 4007 zone id", () => {
+    // The zone id only names the local interface, so the address scope is
+    // unchanged: "::1%lo" is loopback and "ff02::1%eth0" is still multicast.
+    // The zone also makes the literal unparseable as a URL, which would
+    // otherwise hide the address from every check below.
+    for (const host of [
+      "::1%lo",
+      "::1%25lo",
+      "[::1%25lo]",
+      "[::1%25lo]:8080",
+      "ff02::1%eth0",
+      "[ff02::1%25eth0]",
+      "fe80::1%eth0",
+      "fd12::1%eth0",
+      "::ffff:127.0.0.1%eth0",
+      "2002:7f00:1::%eth0",
+    ]) {
+      expect(isNonPublicHostname(host), host).toBe(true);
+    }
+    expect(embeddedIpv4Address("::ffff:127.0.0.1%eth0")).toBe("127.0.0.1");
+    expect(embeddedIpv4Address("[2002:7f00:1::%25eth0]")).toBe("127.0.0.1");
+    // A public scoped address stays public.
+    expect(isNonPublicHostname("[2606:4700::1111%25eth0]")).toBe(false);
+  });
 });
 
 describe("fmtLabel", () => {

@@ -31,11 +31,26 @@ export type YieldLensSummary = {
 const DEFAULT_BASE = "https://api.example.invalid/base-defi";
 
 /**
+ * Drop an RFC 4007 scoped IPv6 zone id ("%eth0", "%25eth0") from a host.
+ * The zone only names the local interface; it does not change the scope of
+ * the address, so a scoped "::1%lo" is still loopback and "ff02::1%eth0" is
+ * still multicast. A zone id also makes the literal unparseable by the
+ * WHATWG URL parser, which would otherwise hide the address entirely.
+ */
+function stripIpv6ZoneId(host: string): string {
+  const pct = host.indexOf("%");
+  if (pct === -1 || !host.includes(":")) return host;
+  return host.slice(0, pct);
+}
+
+/**
  * If hostname is IPv4-mapped IPv6 (::ffff:…), return the embedded IPv4 string.
  * Node URL.hostname often rewrites dotted form to two hextets ("[::ffff:7f00:1]").
  */
 export function ipv4MappedAddress(hostname: string): string | null {
-  const h = hostname.toLowerCase().replace(/\.$/, "").replace(/^\[|\]$/g, "");
+  const h = stripIpv6ZoneId(
+    hostname.toLowerCase().replace(/\.$/, "").replace(/^\[|\]$/g, ""),
+  );
   const dotted = /^::ffff:(\d{1,3}(?:\.\d{1,3}){3})$/i.exec(h);
   if (dotted) return dotted[1]!;
   const hex = /^::ffff:([0-9a-f]{1,4}):([0-9a-f]{1,4})$/i.exec(h);
@@ -49,7 +64,7 @@ export function ipv4MappedAddress(hostname: string): string | null {
 
 /** Expand an IPv6 literal (optional brackets / dotted IPv4 tail) to 8 hextets, else null. */
 function expandIpv6(hostname: string): number[] | null {
-  let h = hostname.toLowerCase().replace(/^\[|\]$/g, "");
+  let h = stripIpv6ZoneId(hostname.toLowerCase().replace(/^\[|\]$/g, ""));
   if (!h.includes(":")) return null;
   const tail = /^(.*:)(\d{1,3}(?:\.\d{1,3}){3})$/.exec(h);
   if (tail) {
@@ -100,7 +115,9 @@ export function embeddedIpv4Address(hostname: string): string | null {
  * shorthand / hex / octal / integer forms ("127.1", "0x7f.0.0.1", "2130706433")
  * become dotted quads, and IPv6 literals are compressed ("0:0:0:0:0:0:0:1" →
  * "[::1]"). An optional authority port ("host:443", "[v6]:443") is dropped first
- * (a Host header / `URL.host` value would otherwise pass as a DNS name).
+ * (a Host header / `URL.host` value would otherwise pass as a DNS name), and an
+ * RFC 4007 zone id ("[::1%25eth0]") is stripped, since it only names the local
+ * interface and would otherwise make the literal unparseable.
  * Unparseable input falls back to the lowercased original.
  */
 function canonicalHostname(hostname: string): string {
@@ -113,7 +130,7 @@ function canonicalHostname(hostname: string): string {
     : /^[^[\]:]+:\d{1,5}$/.test(raw)
       ? raw.slice(0, raw.lastIndexOf(":"))
       : raw;
-  const bare = host0.replace(/^\[|\]$/g, "");
+  const bare = stripIpv6ZoneId(host0.replace(/^\[|\]$/g, ""));
   const host = bare.includes(":") ? `[${bare}]` : host0;
   try {
     return new URL(`http://${host}/`).hostname || raw;
@@ -122,7 +139,7 @@ function canonicalHostname(hostname: string): string {
   }
 }
 
-/** True for localhost / loopback / 0.0.0.0\/8 / RFC1918 / CGNAT / multicast (IPv4 224/4, IPv6 ff00::/8) / reserved 240/4 / IANA special-purpose (192.0.0/24, TEST-NETs, 198.18/15) / link-local (fe80::/10) / IPv6 site-local (fec0::/10) / IPv6 ULA (fc00::/7) / .local/.localhost/.internal/home.arpa (RFC 8375). Accepts a bare hostname or a `host:port` authority (port ignored). */
+/** True for localhost / loopback / 0.0.0.0\/8 / RFC1918 / CGNAT / multicast (IPv4 224/4, IPv6 ff00::/8) / reserved 240/4 / IANA special-purpose (192.0.0/24, TEST-NETs, 198.18/15) / link-local (fe80::/10) / IPv6 site-local (fec0::/10) / IPv6 ULA (fc00::/7) / .local/.localhost/.internal/home.arpa (RFC 8375). Accepts a bare hostname or a `host:port` authority (port ignored) and an RFC 4007 scoped IPv6 literal (zone id ignored, scope unchanged). */
 export function isNonPublicHostname(hostname: string): boolean {
   // Node may keep brackets on IPv6 hostnames ("[fd12::1]").
   const h = canonicalHostname(hostname).replace(/\.$/, "").replace(/^\[|\]$/g, "");
