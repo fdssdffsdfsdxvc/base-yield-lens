@@ -88,7 +88,9 @@ function expandIpv6(hostname: string): number[] | null {
  * IPv4 address embedded in an IPv6 literal that reaches that IPv4 host:
  * IPv4-mapped ::ffff:0:0/96, IPv4-translated ::ffff:0:0:0/96 (SIIT),
  * deprecated IPv4-compatible ::/96, NAT64 well-known prefix 64:ff9b::/96,
- * and 6to4 2002::/16 (embedded tunnel/IPv4 gateway in hextets 1-2).
+ * 6to4 2002::/16 (embedded tunnel/IPv4 gateway in hextets 1-2), and Teredo
+ * 2001::/32 (embedded Teredo server in hextets 2-3; the client IPv4 sits behind
+ * a NAT and is never a destination).
  */
 export function embeddedIpv4Address(hostname: string): string | null {
   const mapped = ipv4MappedAddress(hostname);
@@ -104,6 +106,12 @@ export function embeddedIpv4Address(hostname: string): string | null {
   // embedded address (e.g. 2002:7f00:1::) is an SSRF bypass past v4 checks.
   if (g[0] === 0x2002) {
     return `${g[1]! >> 8}.${g[1]! & 255}.${g[2]! >> 8}.${g[2]! & 255}`;
+  }
+  // Teredo 2001:0000:SSSS:CCCC::/48 (RFC 4380): hextets 2-3 hold the Teredo
+  // server's IPv4 (often a private address on the client's LAN), so decode it
+  // for the same SSRF check as the 6to4 gateway above.
+  if (g[0] === 0x2001 && g[1] === 0) {
+    return `${g[2]! >> 8}.${g[2]! & 255}.${g[3]! >> 8}.${g[3]! & 255}`;
   }
   // ::a.b.c.d (but not :: / ::1, handled as unspecified/loopback).
   if (zero(0, 6) && (g[6] !== 0 || g[7]! > 1)) return v4;

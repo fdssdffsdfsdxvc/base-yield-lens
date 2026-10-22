@@ -659,6 +659,31 @@ describe("isNonPublicHostname", () => {
     expect(isNonPublicHostname("[2002:808:808::1]")).toBe(false);
   });
 
+  it("flags private IPv4 embedded in Teredo 2001::/32 addresses", () => {
+    // Teredo 2001:0000:SSSS:CCCC::/48 (RFC 4380) encodes the Teredo server's
+    // IPv4 in hextets 2-3; a private embedded address is an SSRF bypass past
+    // the plain IPv4 checks, just like the 6to4 gateway above.
+    expect(embeddedIpv4Address("[2001:0:7f00:1::]")).toBe("127.0.0.1");
+    expect(embeddedIpv4Address("[2001:0:c0a8:101::]")).toBe("192.168.1.1");
+    expect(embeddedIpv4Address("[2001:0:a9fe:a9fe::]")).toBe("169.254.169.254");
+    for (const host of [
+      "[2001:0:7f00:1::]",
+      "[2001:0:c0a8:101::]",
+      "[2001:0:a9fe:a9fe::]",
+    ]) {
+      expect(isNonPublicHostname(host), host).toBe(true);
+      expect(() => assertPublicHttpsBaseUrl(`https://${host}/base-defi`)).toThrow(
+        /must not target a private host/,
+      );
+    }
+    // A public Teredo server address (8.8.8.8) stays allowed, and a 2001:db8::/32
+    // address (hextet 1 ≠ 0) is not the Teredo /32 prefix at all.
+    expect(embeddedIpv4Address("[2001:0:808:808::]")).toBe("8.8.8.8");
+    expect(isNonPublicHostname("[2001:0:808:808::]")).toBe(false);
+    expect(embeddedIpv4Address("[2001:db8::1]")).toBeNull();
+    expect(isNonPublicHostname("[2001:db8::1]")).toBe(false);
+  });
+
   it("flags IPv6 multicast ff00::/8 hosts like IPv4 multicast", () => {
     for (const host of ["ff02::1", "[ff05::1:3]", "FF0E::101", "[ff02:0:0:0:0:0:0:1]"]) {
       expect(isNonPublicHostname(host), host).toBe(true);
