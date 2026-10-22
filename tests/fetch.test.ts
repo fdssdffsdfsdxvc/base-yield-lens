@@ -772,6 +772,26 @@ describe("fmtLabel", () => {
     expect(fmtLabel(padded)).toHaveLength(MAX_LABEL_LENGTH);
   });
 
+  it("never truncates mid-surrogate-pair (astral/emoji labels)", () => {
+    // Each 😀 is 2 UTF-16 units; a naive slice(0, 127) would leave a lone high
+    // surrogate, which encodes as U+FFFD mojibake in UTF-8 output.
+    const emoji = "😀".repeat(MAX_LABEL_LENGTH); // 256 UTF-16 units
+    const capped = fmtLabel(emoji);
+    expect(capped.endsWith("…")).toBe(true);
+    expect(capped.length).toBeLessThanOrEqual(MAX_LABEL_LENGTH);
+    expect(capped.length).toBeGreaterThanOrEqual(MAX_LABEL_LENGTH - 1);
+    // Array.from yields code points; a well-formed string never yields a lone
+    // surrogate code point (valid pairs decode to >= U+10000).
+    expect(
+      Array.from(capped).some((cp) => {
+        const n = cp.codePointAt(0)!;
+        return n >= 0xd800 && n <= 0xdfff;
+      }),
+    ).toBe(false);
+    // All emoji + ellipsis still fit when under the cap.
+    expect(fmtLabel("😀".repeat(10))).toBe("😀".repeat(10));
+  });
+
   it("neutralizes terminal control characters from untrusted API labels", () => {
     expect(fmtLabel("\u001b[31mevil\u001b[0m")).toBe("[31mevil [0m");
     expect(fmtLabel("aero\r\nPools: 999")).toBe("aero Pools: 999");

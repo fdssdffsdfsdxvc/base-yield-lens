@@ -292,9 +292,13 @@ export function fmtLabel(value: unknown): string {
   if (typeof value === "string") {
     const trimmed = value.replace(UNSAFE_LABEL_CHARS, " ").trim();
     if (!trimmed) return "?";
-    return trimmed.length > MAX_LABEL_LENGTH
-      ? `${trimmed.slice(0, MAX_LABEL_LENGTH - 1)}…`
-      : trimmed;
+    if (trimmed.length <= MAX_LABEL_LENGTH) return trimmed;
+    // Never end the capped label on a lone high surrogate: the 127-unit cut can
+    // split an astral char (emoji) in two, and the orphan half renders as
+    // mojibake / U+FFFD once the output is encoded as UTF-8.
+    const head = trimmed.slice(0, MAX_LABEL_LENGTH - 1);
+    const capped = /[\ud800-\udbff]$/.test(head) ? head.slice(0, -1) : head;
+    return `${capped}…`;
   }
   return "?";
 }
