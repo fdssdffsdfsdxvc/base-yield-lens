@@ -6,6 +6,7 @@ import {
   MAX_LABEL_LENGTH,
   assertPublicHttpsBaseUrl,
   embeddedIpv4Address,
+  expandIpv6,
   fetchJson,
   fmtLabel,
   formatSummary,
@@ -1231,4 +1232,45 @@ describe("fetch redirects", () => {
       await new Promise<void>((r) => server.close(() => r()));
     }
   });
+});
+
+  describe("expandIpv6", () => {
+    it("expands full IPv6 address without compression", () => {
+      expect(expandIpv6("0:0:0:0:0:0:0:1")).toEqual([0, 0, 0, 0, 0, 0, 0, 1]);
+    });
+
+    it("expands compressed IPv6 with ::", () => {
+      expect(expandIpv6("2001:0db8:0000::1")).toEqual([
+        0x2001,
+        0x0db8,
+        0x0000,
+        0,
+        0,
+        0,
+        0,
+        1,
+      ]);
+    });
+
+    it("expands IPv6 with embedded IPv4 tail", () => {
+      expect(expandIpv6("::127.0.0.1")).toEqual([0, 0, 0, 0, 0, 0, 0x7f, 0x01]);
+    });
+
+    it("returns null for invalid IPv6", () => {
+      expect(expandIpv6("not-an-ipv6")).toBeNull();
+      expect(expandIpv6("")).toBeNull();
+    });
+
+    it("expands IPv6 with leading zeros stripped", () => {
+      expect(expandIpv6("0000:0000:0000:0000:0000:0000:0000:0001")).toEqual([
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1,
+      ]);
+});
 });

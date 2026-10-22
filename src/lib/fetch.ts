@@ -63,7 +63,7 @@ export function ipv4MappedAddress(hostname: string): string | null {
 }
 
 /** Expand an IPv6 literal (optional brackets / dotted IPv4 tail) to 8 hextets, else null. */
-function expandIpv6(hostname: string): number[] | null {
+export function expandIpv6(hostname: string): number[] | null {
   let h = stripIpv6ZoneId(hostname.toLowerCase().replace(/^\[|\]$/g, ""));
   if (!h.includes(":")) return null;
   const tail = /^(.*:)(\d{1,3}(?:\.\d{1,3}){3})$/.exec(h);
