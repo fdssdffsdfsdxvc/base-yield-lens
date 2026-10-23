@@ -1253,7 +1253,17 @@ describe("fetch redirects", () => {
     });
 
     it("expands IPv6 with embedded IPv4 tail", () => {
-      expect(expandIpv6("::127.0.0.1")).toEqual([0, 0, 0, 0, 0, 0, 0x7f, 0x01]);
+      // 127.0.0.1 → 0x7f00:0x0001 (the IPv4 octets are packed two per hextet).
+      expect(expandIpv6("::127.0.0.1")).toEqual([
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0x7f00,
+        0x0001,
+      ]);
     });
 
     it("returns null for invalid IPv6", () => {
