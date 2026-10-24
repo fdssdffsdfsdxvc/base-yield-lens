@@ -592,6 +592,7 @@ describe("isNonPublicHostname", () => {
       "198.19.255.255",
       "198.51.100.7",
       "203.0.113.9",
+      "192.88.99.1",
     ]) {
       expect(isNonPublicHostname(ip), ip).toBe(true);
     }
@@ -599,6 +600,7 @@ describe("isNonPublicHostname", () => {
       /must not target a private host/,
     );
     expect(isNonPublicHostname("[::ffff:c612:1]")).toBe(true); // ::ffff:198.18.0.1
+    expect(isNonPublicHostname("[::ffff:c058:6301]")).toBe(true); // ::ffff:192.88.99.1
   });
 
   it("flags private IPv4-mapped IPv6 (::ffff:) hosts", () => {

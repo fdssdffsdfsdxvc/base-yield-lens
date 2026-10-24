@@ -200,6 +200,9 @@ export function isNonPublicHostname(hostname: string): boolean {
   if (/^192\.0\.[02]\./.test(h)) return true;
   if (/^198\.(1[89])\./.test(h) || /^198\.51\.100\./.test(h)) return true;
   if (/^203\.0\.113\./.test(h)) return true;
+  // Deprecated 6to4 relay router anycast (RFC 7526) 192.88.99.0/24; IANA
+  // special-purpose and not globally reachable.
+  if (/^192\.88\.99\./.test(h)) return true;
   return false;
 }
 
