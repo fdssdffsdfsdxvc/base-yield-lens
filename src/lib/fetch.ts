@@ -416,15 +416,15 @@ export function formatSummary(s: YieldLensSummary): string {
   const lines = [
     `Base yield lens @ ${s.fetchedAt}`,
     `Pools: ${s.pools.length}`,
-    ...s.pools.map(
-      (p) =>
-        `  - [${fmtLabel(p.protocol)}] ${fmtLabel(p.symbol)} TVL=$${fmtNum(p.tvlUsd, 0)} APR=${fmtNum(p.aprPct, 2)}%`,
-    ),
+    ...s.pools.map((p) => {
+      const asOf = p.asOf ? ` @ ${p.asOf}` : "";
+      return `  - [${fmtLabel(p.protocol)}] ${fmtLabel(p.symbol)} TVL=$${fmtNum(p.tvlUsd, 0)} APR=${fmtNum(p.aprPct, 2)}%${asOf}`;
+    }),
     `Lending: ${s.lending.length}`,
-    ...s.lending.map(
-      (m) =>
-        `  - [${fmtLabel(m.protocol)}] ${fmtLabel(m.market)} supply=${fmtNum(m.supplyApyPct, 2)}% borrow=${fmtNum(m.borrowApyPct, 2)}%`,
-    ),
+    ...s.lending.map((m) => {
+      const asOf = m.asOf ? ` @ ${m.asOf}` : "";
+      return `  - [${fmtLabel(m.protocol)}] ${fmtLabel(m.market)} supply=${fmtNum(m.supplyApyPct, 2)}% borrow=${fmtNum(m.borrowApyPct, 2)}%${asOf}`;
+    }),
   ];
   return lines.join("\n");
 }
