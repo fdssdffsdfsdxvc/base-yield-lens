@@ -328,7 +328,11 @@ function asNumber(value: unknown): number {
 }
 
 function asOfString(value: unknown): string {
-  return typeof value === "string" ? value : "";
+  // asOf is an untrusted API string printed into the summary: neutralize the
+  // same control characters as labels so it cannot forge extra output lines.
+  return typeof value === "string"
+    ? value.replace(UNSAFE_LABEL_CHARS, " ").trim()
+    : "";
 }
 
 /** Drop nulls / non-objects / arrays; coerce fields so formatSummary never crashes. */
@@ -413,17 +417,20 @@ export async function summarizeYields(opts?: {
 }
 
 export function formatSummary(s: YieldLensSummary): string {
+  const fetchedAt = s.fetchedAt.replace(UNSAFE_LABEL_CHARS, " ").trim();
   const lines = [
-    `Base yield lens @ ${s.fetchedAt}`,
+    `Base yield lens @ ${fetchedAt}`,
     `Pools: ${s.pools.length}`,
     ...s.pools.map((p) => {
-      const asOf = p.asOf ? ` @ ${p.asOf}` : "";
-      return `  - [${fmtLabel(p.protocol)}] ${fmtLabel(p.symbol)} TVL=$${fmtNum(p.tvlUsd, 0)} APR=${fmtNum(p.aprPct, 2)}%${asOf}`;
+      const asOf = p.asOf.replace(UNSAFE_LABEL_CHARS, " ").trim();
+      const suffix = asOf ? ` @ ${asOf}` : "";
+      return `  - [${fmtLabel(p.protocol)}] ${fmtLabel(p.symbol)} TVL=$${fmtNum(p.tvlUsd, 0)} APR=${fmtNum(p.aprPct, 2)}%${suffix}`;
     }),
     `Lending: ${s.lending.length}`,
     ...s.lending.map((m) => {
-      const asOf = m.asOf ? ` @ ${m.asOf}` : "";
-      return `  - [${fmtLabel(m.protocol)}] ${fmtLabel(m.market)} supply=${fmtNum(m.supplyApyPct, 2)}% borrow=${fmtNum(m.borrowApyPct, 2)}%${asOf}`;
+      const asOf = m.asOf.replace(UNSAFE_LABEL_CHARS, " ").trim();
+      const suffix = asOf ? ` @ ${asOf}` : "";
+      return `  - [${fmtLabel(m.protocol)}] ${fmtLabel(m.market)} supply=${fmtNum(m.supplyApyPct, 2)}% borrow=${fmtNum(m.borrowApyPct, 2)}%${suffix}`;
     }),
   ];
   return lines.join("\n");
