@@ -147,7 +147,7 @@ function canonicalHostname(hostname: string): string {
   }
 }
 
-/** True for localhost / loopback / 0.0.0.0\/8 / RFC1918 / CGNAT / multicast (IPv4 224/4, IPv6 ff00::/8) / reserved 240/4 / IANA special-purpose (192.0.0/24, TEST-NETs, 198.18/15) / IPv6 documentation prefixes (2001:db8::/32, 3fff::/20) / link-local (fe80::/10) / IPv6 site-local (fec0::/10) / IPv6 ULA (fc00::/7) / .local/.localhost/.internal/home.arpa (RFC 8375). Accepts a bare hostname or a `host:port` authority (port ignored) and an RFC 4007 scoped IPv6 literal (zone id ignored, scope unchanged). */
+/** True for localhost / loopback / 0.0.0.0\/8 / RFC1918 / CGNAT / multicast (IPv4 224/4, IPv6 ff00::/8) / reserved 240/4 / IANA special-purpose (192.0.0/24, TEST-NETs, 198.18/15) / IPv6 documentation prefixes (2001:db8::/32, 3fff::/20) / IPv6 discard-only (100::/64) / IPv6 benchmarking (2001:2::/48) / link-local (fe80::/10) / IPv6 site-local (fec0::/10) / IPv6 ULA (fc00::/7) / .local/.localhost/.internal/home.arpa (RFC 8375). Accepts a bare hostname or a `host:port` authority (port ignored) and an RFC 4007 scoped IPv6 literal (zone id ignored, scope unchanged). */
 export function isNonPublicHostname(hostname: string): boolean {
   // Node may keep brackets on IPv6 hostnames ("[fd12::1]").
   const h = canonicalHostname(hostname).replace(/\.$/, "").replace(/^\[|\]$/g, "");
@@ -163,6 +163,10 @@ export function isNonPublicHostname(hostname: string): boolean {
   // the TEST-NET blocks rejected below.
   if (v6 && v6[0] === 0x2001 && v6[1] === 0xdb8) return true;
   if (v6 && v6[0] === 0x3fff && v6[1]! >> 12 === 0) return true;
+  // IPv6 discard-only 100::/64 (RFC 6666) and benchmarking 2001:2::/48
+  // (RFC 5180): IANA special-purpose, not globally reachable.
+  if (v6 && v6[0] === 0x100 && v6[1] === 0 && v6[2] === 0 && v6[3] === 0) return true;
+  if (v6 && v6[0] === 0x2001 && v6[1] === 2 && v6[2] === 0) return true;
   if (
     h === "localhost" ||
     h === "0.0.0.0" ||
