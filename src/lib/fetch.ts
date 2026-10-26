@@ -129,15 +129,16 @@ export function embeddedIpv4Address(hostname: string): string | null {
  * Unparseable input falls back to the lowercased original.
  */
 function canonicalHostname(hostname: string): string {
-  const raw = hostname.trim().toLowerCase();
+  const raw = hostname.trim().toLowerCase().replace(/\.+$/, "");
   const bracketed = /^\[([^\]]+)\](?::\d{1,5})?$/.exec(raw);
+  const zoneFree = bracketed ? raw : stripIpv6ZoneId(raw);
   // Exactly one colon separates host from port here, so a bare IPv6 hextet
   // list ("2001:db8::1", "0:0:0:0:0:0:0:1") is never mistaken for a port.
   const host0 = bracketed
     ? bracketed[1]!
-    : /^[^[\]:]+:\d{1,5}$/.test(raw)
-      ? raw.slice(0, raw.lastIndexOf(":"))
-      : raw;
+    : /^[^[\]:]+:\d{1,5}$/.test(zoneFree)
+      ? zoneFree.slice(0, zoneFree.lastIndexOf(":"))
+      : zoneFree;
   const bare = stripIpv6ZoneId(host0.replace(/^\[|\]$/g, ""));
   const host = bare.includes(":") ? `[${bare}]` : bare;
   try {
@@ -150,7 +151,7 @@ function canonicalHostname(hostname: string): string {
 /** True for localhost / loopback / 0.0.0.0\/8 / RFC1918 / CGNAT / multicast (IPv4 224/4, IPv6 ff00::/8) / reserved 240/4 / IANA special-purpose (192.0.0/24, TEST-NETs, 198.18/15) / IPv6 documentation prefixes (2001:db8::/32, 3fff::/20) / IPv6 discard-only (100::/64) / IPv6 dummy (100:0:0:1::/64) / IPv6 benchmarking (2001:2::/48) / link-local (fe80::/10) / IPv6 site-local (fec0::/10) / IPv6 ULA (fc00::/7) / .local/.localhost/.internal/home.arpa (RFC 8375). Accepts a bare hostname or a `host:port` authority (port ignored) and an RFC 4007 scoped IPv6 literal (zone id ignored, scope unchanged). */
 export function isNonPublicHostname(hostname: string): boolean {
   // Node may keep brackets on IPv6 hostnames ("[fd12::1]").
-  const h = canonicalHostname(hostname).replace(/\.$/, "").replace(/^\[|\]$/g, "");
+  const h = canonicalHostname(hostname).replace(/\.+$/, "").replace(/^\[|\]$/g, "");
   const mapped = embeddedIpv4Address(h);
   if (mapped) return isNonPublicHostname(mapped);
   // NAT64 local-use prefix 64:ff9b:1::/48 (RFC 8215) is site-local by definition.
