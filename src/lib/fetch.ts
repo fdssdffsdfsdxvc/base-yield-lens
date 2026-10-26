@@ -171,6 +171,9 @@ export function isNonPublicHostname(hostname: string): boolean {
     ((v6[1]! & 0xfff0) === 0x0010 || (v6[1]! & 0xfff0) === 0x0020)
   )
     return true;
+  // IPv6 Segment Routing SIDs (RFC 9602) 5f00::/16: IANA special-purpose,
+  // not globally reachable.
+  if (v6 && v6[0] === 0x5f00) return true;
   // IPv6 discard-only 100::/64 (RFC 6666) and benchmarking 2001:2::/48
   // (RFC 5180): IANA special-purpose, not globally reachable.
   if (v6 && v6[0] === 0x100 && v6[1] === 0 && v6[2] === 0 && v6[3] === 0) return true;
