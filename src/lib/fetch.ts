@@ -163,6 +163,14 @@ export function isNonPublicHostname(hostname: string): boolean {
   // the TEST-NET blocks rejected below.
   if (v6 && v6[0] === 0x2001 && v6[1] === 0xdb8) return true;
   if (v6 && v6[0] === 0x3fff && v6[1]! >> 12 === 0) return true;
+  // IPv6 ORCHID (RFC 7343) 2001:10::/28 and ORCHIDv2 (RFC 9313) 2001:20::/28:
+  // IANA special-purpose, not globally routable.
+  if (
+    v6 &&
+    v6[0] === 0x2001 &&
+    ((v6[1]! & 0xfff0) === 0x0010 || (v6[1]! & 0xfff0) === 0x0020)
+  )
+    return true;
   // IPv6 discard-only 100::/64 (RFC 6666) and benchmarking 2001:2::/48
   // (RFC 5180): IANA special-purpose, not globally reachable.
   if (v6 && v6[0] === 0x100 && v6[1] === 0 && v6[2] === 0 && v6[3] === 0) return true;
@@ -327,12 +335,21 @@ function asNumber(value: unknown): number {
   return Number.NaN;
 }
 
+function capUntrustedText(value: string): string {
+  const neutralized = value.replace(UNSAFE_LABEL_CHARS, " ").trim();
+  if (neutralized.length <= MAX_LABEL_LENGTH) return neutralized;
+  // Keep the surrogate-safe truncation used by fmtLabel so a capped timestamp
+  // never ends on a lone high surrogate.
+  const head = neutralized.slice(0, MAX_LABEL_LENGTH - 1);
+  const capped = /[\ud800-\udbff]$/.test(head) ? head.slice(0, -1) : head;
+  return `${capped}…`;
+}
+
 function asOfString(value: unknown): string {
   // asOf is an untrusted API string printed into the summary: neutralize the
-  // same control characters as labels so it cannot forge extra output lines.
-  return typeof value === "string"
-    ? value.replace(UNSAFE_LABEL_CHARS, " ").trim()
-    : "";
+  // same control characters as labels (and cap its length) so it cannot forge
+  // extra output lines or flood stdout/logs.
+  return typeof value === "string" ? capUntrustedText(value) : "";
 }
 
 /** Drop nulls / non-objects / arrays; coerce fields so formatSummary never crashes. */
@@ -417,18 +434,18 @@ export async function summarizeYields(opts?: {
 }
 
 export function formatSummary(s: YieldLensSummary): string {
-  const fetchedAt = s.fetchedAt.replace(UNSAFE_LABEL_CHARS, " ").trim();
+  const fetchedAt = capUntrustedText(s.fetchedAt);
   const lines = [
     `Base yield lens @ ${fetchedAt}`,
     `Pools: ${s.pools.length}`,
     ...s.pools.map((p) => {
-      const asOf = p.asOf.replace(UNSAFE_LABEL_CHARS, " ").trim();
+      const asOf = capUntrustedText(p.asOf);
       const suffix = asOf ? ` @ ${asOf}` : "";
       return `  - [${fmtLabel(p.protocol)}] ${fmtLabel(p.symbol)} TVL=$${fmtNum(p.tvlUsd, 0)} APR=${fmtNum(p.aprPct, 2)}%${suffix}`;
     }),
     `Lending: ${s.lending.length}`,
     ...s.lending.map((m) => {
-      const asOf = m.asOf.replace(UNSAFE_LABEL_CHARS, " ").trim();
+      const asOf = capUntrustedText(m.asOf);
       const suffix = asOf ? ` @ ${asOf}` : "";
       return `  - [${fmtLabel(m.protocol)}] ${fmtLabel(m.market)} supply=${fmtNum(m.supplyApyPct, 2)}% borrow=${fmtNum(m.borrowApyPct, 2)}%${suffix}`;
     }),
