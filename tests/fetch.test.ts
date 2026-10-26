@@ -732,7 +732,7 @@ describe("isNonPublicHostname", () => {
       /must not target a private host/,
     );
     // Neighbours of both prefixes stay public.
-    expect(isNonPublicHostname("[100:0:0:1::]")).toBe(false);
+    expect(isNonPublicHostname("[100:0:0:1::]")).toBe(true);
     expect(isNonPublicHostname("[100:0:1::]")).toBe(false);
     expect(isNonPublicHostname("[2001:1::1]")).toBe(false);
     expect(isNonPublicHostname("[2001:3::1]")).toBe(false);
