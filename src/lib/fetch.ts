@@ -171,6 +171,9 @@ export function isNonPublicHostname(hostname: string): boolean {
     ((v6[1]! & 0xfff0) === 0x0010 || (v6[1]! & 0xfff0) === 0x0020)
   )
     return true;
+  // IPv6 Drone Remote ID Protocol Entity Tags (RFC 9374) 2001:30::/28:
+  // IANA special-purpose, not globally routable.
+  if (v6 && v6[0] === 0x2001 && (v6[1]! & 0xfff0) === 0x0030) return true;
   // IPv6 Segment Routing SIDs (RFC 9602) 5f00::/16: IANA special-purpose,
   // not globally reachable.
   if (v6 && v6[0] === 0x5f00) return true;
