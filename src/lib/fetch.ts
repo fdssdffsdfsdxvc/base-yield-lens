@@ -39,7 +39,7 @@ const DEFAULT_BASE = "https://api.example.invalid/base-defi";
  */
 function stripIpv6ZoneId(host: string): string {
   const pct = host.indexOf("%");
-  if (pct === -1 || !host.includes(":")) return host;
+  if (pct === -1) return host;
   return host.slice(0, pct);
 }
 
@@ -139,7 +139,7 @@ function canonicalHostname(hostname: string): string {
       ? raw.slice(0, raw.lastIndexOf(":"))
       : raw;
   const bare = stripIpv6ZoneId(host0.replace(/^\[|\]$/g, ""));
-  const host = bare.includes(":") ? `[${bare}]` : host0;
+  const host = bare.includes(":") ? `[${bare}]` : bare;
   try {
     return new URL(`http://${host}/`).hostname || raw;
   } catch {
