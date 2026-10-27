@@ -130,8 +130,10 @@ export function embeddedIpv4Address(hostname: string): string | null {
  */
 function canonicalHostname(hostname: string): string {
   const raw = hostname.trim().toLowerCase().replace(/\.+$/, "");
-  const bracketed = /^\[([^\]]+)\](?::\d{1,5})?$/.exec(raw);
-  const zoneFree = bracketed ? raw : stripIpv6ZoneId(raw);
+  const bracketedRaw = /^\[([^\]]+)\](?::\d{1,5})?$/.exec(raw);
+  const working = bracketedRaw ? raw : stripIpv6ZoneId(raw);
+  const bracketed = bracketedRaw ?? /^\[([^\]]+)\](?::\d{1,5})?$/.exec(working);
+  const zoneFree = bracketed ? working : stripIpv6ZoneId(working);
   // Exactly one colon separates host from port here, so a bare IPv6 hextet
   // list ("2001:db8::1", "0:0:0:0:0:0:0:1") is never mistaken for a port.
   const host0 = bracketed
