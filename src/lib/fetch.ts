@@ -129,7 +129,7 @@ export function embeddedIpv4Address(hostname: string): string | null {
  * Unparseable input falls back to the lowercased original.
  */
 function canonicalHostname(hostname: string): string {
-  const raw = hostname.trim().toLowerCase().replace(/\.+$/, "");
+  const raw = hostname.trim().toLowerCase().replace(/\.(?=%)/g, "").replace(/\.+$/, "");
   const bracketedRaw = /^\[([^\]]+)\](?::\d{1,5})?$/.exec(raw);
   const working = bracketedRaw ? raw : stripIpv6ZoneId(raw);
   const bracketed = bracketedRaw ?? /^\[([^\]]+)\](?::\d{1,5})?$/.exec(working);
