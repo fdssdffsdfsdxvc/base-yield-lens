@@ -317,6 +317,13 @@ const UNSAFE_LABEL_CHARS = /[\u0000-\u001f\u007f-\u009f\u2028\u2029\u202a-\u202e
 /** Cap on rendered label length: a huge upstream string must not flood stdout/logs. */
 export const MAX_LABEL_LENGTH = 128;
 
+/**
+ * Cap on rows kept per section: even inside the MAX_RESPONSE_BYTES body cap, a
+ * hostile endpoint can pack thousands of tiny records; without a row cap the
+ * summary would emit tens of thousands of stdout/log lines.
+ */
+export const MAX_SUMMARY_ROWS = 1_000;
+
 /** Non-empty string label (controls → space, trimmed, hard-capped length), else "?" (avoids "undefined"/"null" in CLI output). */
 export function fmtLabel(value: unknown): string {
   if (typeof value === "string") {
@@ -367,9 +374,10 @@ function asOfString(value: unknown): string {
   return typeof value === "string" ? capUntrustedText(value) : "";
 }
 
-/** Drop nulls / non-objects / arrays; coerce fields so formatSummary never crashes. */
+/** Drop nulls / non-objects / arrays; coerce fields so formatSummary never crashes; cap rows at MAX_SUMMARY_ROWS. */
 export function normalizePools(value: unknown): PoolSnapshot[] {
   return asArray(value)
+    .slice(0, MAX_SUMMARY_ROWS)
     .filter(isRecord)
     .map((v) => ({
       protocol: fmtLabel(v.protocol),
@@ -383,6 +391,7 @@ export function normalizePools(value: unknown): PoolSnapshot[] {
 
 export function normalizeLending(value: unknown): LendingSnapshot[] {
   return asArray(value)
+    .slice(0, MAX_SUMMARY_ROWS)
     .filter(isRecord)
     .map((v) => ({
       protocol: fmtLabel(v.protocol),

@@ -5,6 +5,7 @@ import {
   DEFAULT_FETCH_TIMEOUT_MS,
   MAX_LABEL_LENGTH,
   MAX_RESPONSE_BYTES,
+  MAX_SUMMARY_ROWS,
   assertPublicHttpsBaseUrl,
   embeddedIpv4Address,
   expandIpv6,
@@ -987,6 +988,33 @@ describe("normalizePools / normalizeLending", () => {
     expect(formatSummary(summary)).toContain("WETH/USDC");
     expect(formatSummary(summary)).not.toContain("undefined");
     expect(formatSummary(summary)).not.toContain("null");
+  });
+
+  it("caps normalized pools/lending at MAX_SUMMARY_ROWS per section", async () => {
+    expect(MAX_SUMMARY_ROWS).toBeGreaterThan(0);
+    const row = { protocol: "a", poolId: "1", symbol: "WETH/USD", tvlUsd: 1, aprPct: 1, asOf: "t" };
+    const market = { protocol: "a", market: "USDC", supplyApyPct: 1, borrowApyPct: 1 };
+    const fetchImpl = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      const body = url.endsWith("/pools")
+        ? Array.from({ length: MAX_SUMMARY_ROWS + 5 }, () => row)
+        : Array.from({ length: MAX_SUMMARY_ROWS + 5 }, () => market);
+      return new Response(JSON.stringify(body), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      });
+    }) as unknown as typeof fetch;
+
+    const summary = await summarizeYields({
+      baseUrl: "https://mock.test/base-defi",
+      fetchImpl,
+    });
+
+    expect(summary.pools).toHaveLength(MAX_SUMMARY_ROWS);
+    expect(summary.lending).toHaveLength(MAX_SUMMARY_ROWS);
+    expect(summary.pools.every((p) => p.symbol === "WETH/USD")).toBe(true);
+    const text = formatSummary(summary);
+    expect(text.split("\n")).toHaveLength(2 + MAX_SUMMARY_ROWS + 1 + MAX_SUMMARY_ROWS);
   });
 
   it("drops nested array elements so they do not become junk ? rows", async () => {
