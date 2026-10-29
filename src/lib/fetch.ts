@@ -442,9 +442,17 @@ export async function fetchJson<T>(
   fetchImpl: typeof fetch = fetch,
   timeoutMs: number = DEFAULT_FETCH_TIMEOUT_MS,
 ): Promise<T> {
+  // AbortSignal.timeout throws RangeError for negative, non-finite, or
+  // fractional delays; fall back to the default so a bad caller-supplied
+  // timeout keeps the offline-friendly failure path (summarizeYields catches
+  // per-request rejections, but a synchronous throw would crash the CLI).
+  const ms =
+    Number.isFinite(timeoutMs) && Number.isInteger(timeoutMs) && timeoutMs >= 0
+      ? timeoutMs
+      : DEFAULT_FETCH_TIMEOUT_MS;
   const res = await fetchImpl(url, {
     headers: { accept: "application/json" },
-    signal: AbortSignal.timeout(timeoutMs),
+    signal: AbortSignal.timeout(ms),
     // Following redirects would bypass assertPublicHttpsBaseUrl (a public https
     // root could 30x to http:// or a private/metadata host). Treat as failure.
     redirect: "error",

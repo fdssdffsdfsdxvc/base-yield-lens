@@ -1338,6 +1338,34 @@ describe("fetch timeout", () => {
     expect(Number.isFinite(DEFAULT_FETCH_TIMEOUT_MS)).toBe(true);
     expect(DEFAULT_FETCH_TIMEOUT_MS).toBeGreaterThan(0);
   });
+
+  it("falls back to the default timeout for negative/non-finite/fractional timeoutMs", async () => {
+    // AbortSignal.timeout throws RangeError for each of these; fetchJson must
+    // coerce them to the default instead of crashing synchronously (which
+    // would break the offline-friendly summarizeYields fallback).
+    const bad = [-1, Number.NaN, Number.POSITIVE_INFINITY, 1.5];
+    const seen: (AbortSignal | null | undefined)[] = [];
+    const recordingFetch = vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
+      seen.push(init?.signal);
+      return new Response("[]", { status: 200 });
+    }) as unknown as typeof fetch;
+
+    for (const timeoutMs of bad) {
+      await expect(
+        fetchJson("https://mock.test/pools", recordingFetch, timeoutMs),
+      ).resolves.toEqual([]);
+      // summarizeYields takes the same path via fetchJson.
+      const summary = await summarizeYields({
+        baseUrl: "https://mock.test/base-defi",
+        fetchImpl: recordingFetch,
+        timeoutMs,
+      });
+      expect(summary.pools).toEqual([]);
+    }
+    // Signals were created (not instantly aborted) by the defaulted timeouts.
+    expect(seen.length).toBe(bad.length * 3);
+    for (const signal of seen) expect(signal?.aborted).toBe(false);
+  });
 });
 
 describe("fetch redirects", () => {
