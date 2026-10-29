@@ -735,8 +735,28 @@ describe("isNonPublicHostname", () => {
     expect(isNonPublicHostname("[100:0:0:1::]")).toBe(true);
     expect(isNonPublicHostname("[100:0:1::]")).toBe(false);
     expect(isNonPublicHostname("[2001:1::1]")).toBe(false);
-    expect(isNonPublicHostname("[2001:3::1]")).toBe(false);
     expect(isNonPublicHostname("[2001:2:1::]")).toBe(false);
+  });
+
+  it("flags IPv6 Automatic Multicast Tunneling 2001:3::/32 addresses", () => {
+    // AMT (RFC 7450) is an IETF protocol assignment inside 2001::/23, IANA
+    // special-purpose and not globally reachable — like the benchmarking
+    // 2001:2::/48 block rejected above.
+    for (const host of [
+      "[2001:3::1]",
+      "2001:0003:0000::1",
+      "[2001:3::]:8080",
+      "[2001:3:0:1::]",
+    ]) {
+      expect(isNonPublicHostname(host), host).toBe(true);
+    }
+    expect(() => assertPublicHttpsBaseUrl("https://[2001:3::1]/base-defi")).toThrow(
+      /must not target a private host/,
+    );
+    // Neighbours of the /32 stay public: a fully different 2001 hextet is not
+    // within 2001:3::/32 at all (2001:2::/48 itself is flagged separately).
+    expect(isNonPublicHostname("[2001:2::1]")).toBe(true);
+    expect(isNonPublicHostname("[2001:4::1]")).toBe(false);
   });
 
   it("flags IPv6 multicast ff00::/8 hosts like IPv4 multicast", () => {
