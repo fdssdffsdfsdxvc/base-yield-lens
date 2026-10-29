@@ -400,6 +400,17 @@ function fmtNum(n: number, digits: number): string {
 /** Per-request timeout; Node fetch has no overall deadline (undici waits ~5 min). */
 export const DEFAULT_FETCH_TIMEOUT_MS = 10_000;
 
+/**
+ * Cap on how much of an untrusted response body is read into memory: a hostile
+ * or misbehaving endpoint must not flood the heap with gigabytes before parse.
+ * The `content-length` header is checked before reading when present; the
+ * decoded body after reading (chunked / unknown-length responses). Counted in
+ * UTF-16 string units — a body whose byte size exceeds the cap is always
+ * rejected when `content-length` is present, and the post-read check bounds
+ * allocation growth for unknown lengths.
+ */
+export const MAX_RESPONSE_BYTES = 2_000_000;
+
 export async function fetchJson<T>(
   url: string,
   fetchImpl: typeof fetch = fetch,
@@ -417,7 +428,16 @@ export async function fetchJson<T>(
     // the error (summarizeYields validates its base, but fetchJson is public).
     throw new Error(`HTTP ${res.status} for ${redactUrlCredentials(url)}`);
   }
-  return (await res.json()) as T;
+  const tooLarge = `HTTP body exceeds ${MAX_RESPONSE_BYTES} bytes for ${redactUrlCredentials(url)}`;
+  const declared = Number.parseInt(res.headers.get("content-length") ?? "", 10);
+  if (Number.isFinite(declared) && declared > MAX_RESPONSE_BYTES) {
+    throw new Error(tooLarge);
+  }
+  const text = await res.text();
+  if (text.length > MAX_RESPONSE_BYTES) {
+    throw new Error(tooLarge);
+  }
+  return JSON.parse(text) as T;
 }
 
 /** Summarize placeholder Aerodrome-style pools + Aave-style markets. */

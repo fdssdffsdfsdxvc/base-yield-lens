@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   DEFAULT_FETCH_TIMEOUT_MS,
   MAX_LABEL_LENGTH,
+  MAX_RESPONSE_BYTES,
   assertPublicHttpsBaseUrl,
   embeddedIpv4Address,
   expandIpv6,
@@ -258,6 +259,57 @@ describe("fetchJson", () => {
         fetchImpl,
       ),
     ).resolves.toEqual({ ok: true, n: 42 });
+  });
+
+  it("rejects a body whose declared content-length exceeds the cap", async () => {
+    const fetchImpl = vi.fn(
+      async () =>
+        new Response('{"ok":true}', {
+          status: 200,
+          headers: { "content-length": String(MAX_RESPONSE_BYTES + 1) },
+        }),
+    ) as unknown as typeof fetch;
+
+    await expect(
+      fetchJson("https://mock.test/big", fetchImpl),
+    ).rejects.toThrow(
+      `HTTP body exceeds ${MAX_RESPONSE_BYTES} bytes for https://mock.test/big`,
+    );
+  });
+
+  it("rejects a chunked body that exceeds the cap once read", async () => {
+    const fetchImpl = vi.fn(
+      async () => new Response("x".repeat(MAX_RESPONSE_BYTES + 1), { status: 200 }),
+    ) as unknown as typeof fetch;
+
+    await expect(
+      fetchJson("https://mock.test/big", fetchImpl),
+    ).rejects.toThrow(`HTTP body exceeds ${MAX_RESPONSE_BYTES} bytes`);
+
+    // A hostile URL with credentials must not leak them in the error.
+    let message = "";
+    try {
+      await fetchJson("https://user:bigsecret@mock.test/big", fetchImpl);
+    } catch (err) {
+      message = (err as Error).message;
+    }
+    expect(message).toBe(
+      `HTTP body exceeds ${MAX_RESPONSE_BYTES} bytes for https://***@mock.test/big`,
+    );
+    expect(message).not.toContain("bigsecret");
+  });
+
+  it("summarizeYields falls back to empty arrays on oversized bodies", async () => {
+    const fetchImpl = vi.fn(
+      async () => new Response("x".repeat(MAX_RESPONSE_BYTES + 1), { status: 200 }),
+    ) as unknown as typeof fetch;
+
+    const summary = await summarizeYields({
+      baseUrl: "https://mock.test/base-defi",
+      fetchImpl,
+    });
+    expect(summary.pools).toEqual([]);
+    expect(summary.lending).toEqual([]);
   });
 });
 
