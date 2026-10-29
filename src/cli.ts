@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { parseCliArgs, CLI_USAGE } from "./cliArgs.js";
+import { CLI_USAGE, neutralizeUnsafeCliChars, parseCliArgs } from "./cliArgs.js";
 import { formatSummary, summarizeYields } from "./lib/fetch.js";
 
 async function main() {
@@ -18,6 +18,9 @@ async function main() {
 }
 
 main().catch((err) => {
-  console.error(err instanceof Error ? err.message : err);
+  // Error text embeds untrusted argv / YIELD_LENS_BASE_URL values (credentials
+  // are already masked): neutralize control characters so it cannot rewrite
+  // the terminal or forge extra error lines.
+  console.error(neutralizeUnsafeCliChars(err instanceof Error ? err.message : String(err)));
   process.exit(1);
 });
