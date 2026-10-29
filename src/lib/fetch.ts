@@ -248,10 +248,27 @@ export function redactUrlCredentials(url: string): string {
   // excluding either from the match would abort it and echo the secret instead.
   // A credential-free host with an "@" in its path/query/fragment is at worst
   // over-masked, which is safe for a message.
-  return url.replace(
+  const masked = url.replace(
     /^(\s*(?:[a-z][a-z0-9+.-]*:[\/\\]*|[\/\\]+))[^/]*@/i,
     "$1***@",
   );
+  if (masked !== url) return masked;
+  // A password containing "/" ("https://u:p/ass@h") both aborts the match above
+  // (the authority ends at that "/") and makes the URL unparseable (the truncated
+  // authority leaves a non-numeric "port"), leaking the echoed credential. When
+  // the URL parses cleanly, any "@" after the first "/" is in the path/query,
+  // not userinfo — so only unparseable input gets this second, broader pass;
+  // the "user:pass" ":" requirement keeps a bare path "@" untouched.
+  try {
+    new URL(url);
+  } catch {
+    const broader = url.replace(
+      /^(\s*(?:[a-z][a-z0-9+.-]*:[\/\\]*|[\/\\]+))[^/\s]*:[^@]*@/i,
+      "$1***@",
+    );
+    if (broader !== url) return broader;
+  }
+  return url;
 }
 
 /**

@@ -1256,6 +1256,18 @@ describe("redactUrlCredentials", () => {
     expect(redactUrlCredentials("https://us\\er:hunter2@mock.test/x")).toBe(
       "https://***@mock.test/x",
     );
+    // "/" also makes the URL unparseable and aborts the plain authority match;
+    // it must fall through to the broader pass instead of echoing the secret.
+    expect(redactUrlCredentials("https://user:p/ass@mock.test/x")).toBe(
+      "https://***@mock.test/x",
+    );
+    expect(redactUrlCredentials("//u:p/ass@mock.test/x")).toBe(
+      "//***@mock.test/x",
+    );
+    // A ":" won't over-mask a parseable host:port whose path carries an "@".
+    expect(redactUrlCredentials("https://mock.test:8443/a@b")).toBe(
+      "https://mock.test:8443/a@b",
+    );
     expect(redactUrlCredentials("not-a-url")).toBe("not-a-url");
   });
 
@@ -1271,6 +1283,8 @@ describe("redactUrlCredentials", () => {
       // A "\" in the password makes the URL unparseable, so the raw string is
       // echoed by the "valid https URL" error and must still be masked.
       ["https://user:p\\ass@mock.test/base-defi", "p\\ass"],
+      // Same for a "/" in the password (also unparseable + mask aborted).
+      ["https://user:p/ass@mock.test/base-defi", "p/ass"],
     ];
     for (const [url, secret] of cases) {
       let message = "";
