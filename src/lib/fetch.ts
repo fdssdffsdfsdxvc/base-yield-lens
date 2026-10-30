@@ -429,11 +429,10 @@ export const DEFAULT_FETCH_TIMEOUT_MS = 10_000;
 /**
  * Cap on how much of an untrusted response body is read into memory: a hostile
  * or misbehaving endpoint must not flood the heap with gigabytes before parse.
- * The `content-length` header is checked before reading when present; the
- * decoded body after reading (chunked / unknown-length responses). Counted in
- * UTF-16 string units — a body whose byte size exceeds the cap is always
- * rejected when `content-length` is present, and the post-read check bounds
- * allocation growth for unknown lengths.
+ * The `content-length` header is checked before reading when present, and the
+ * body is otherwise streamed with the read cancelled as soon as the byte count
+ * exceeds the cap (chunked / unknown-length responses) instead of buffering the
+ * whole body first.
  */
 export const MAX_RESPONSE_BYTES = 2_000_000;
 
@@ -467,7 +466,30 @@ export async function fetchJson<T>(
   if (Number.isFinite(declared) && declared > MAX_RESPONSE_BYTES) {
     throw new Error(tooLarge);
   }
-  const text = await res.text();
+  // Stream the body so a chunked / unknown-length response cannot fill the heap
+  // before the size check: cancel the download as soon as it exceeds the cap.
+  const reader = res.body?.getReader();
+  let text = "";
+  if (reader) {
+    const decoder = new TextDecoder();
+    let bytes = 0;
+    try {
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        if (!value) continue;
+        bytes += value.byteLength;
+        if (bytes > MAX_RESPONSE_BYTES) {
+          await reader.cancel().catch(() => {});
+          throw new Error(tooLarge);
+        }
+        text += decoder.decode(value, { stream: true });
+      }
+      text += decoder.decode();
+    } finally {
+      reader.releaseLock();
+    }
+  }
   if (text.length > MAX_RESPONSE_BYTES) {
     throw new Error(tooLarge);
   }

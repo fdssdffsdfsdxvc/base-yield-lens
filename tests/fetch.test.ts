@@ -300,6 +300,37 @@ describe("fetchJson", () => {
     expect(message).not.toContain("bigsecret");
   });
 
+  it("cancels a chunked body as soon as it exceeds the cap instead of buffering it", async () => {
+    const chunk = new Uint8Array(1024).fill(120); // "x"
+    const totalChunks = Math.ceil(MAX_RESPONSE_BYTES / chunk.byteLength) + 10;
+    let pulled = 0;
+    let cancelled = false;
+    const stream = new ReadableStream<Uint8Array>({
+      pull(controller) {
+        if (pulled >= totalChunks) {
+          controller.close();
+          return;
+        }
+        pulled++;
+        controller.enqueue(chunk);
+      },
+      cancel() {
+        cancelled = true;
+      },
+    });
+    const fetchImpl = vi.fn(
+      async () => new Response(stream, { status: 200 }),
+    ) as unknown as typeof fetch;
+
+    await expect(
+      fetchJson("https://mock.test/stream", fetchImpl),
+    ).rejects.toThrow(`HTTP body exceeds ${MAX_RESPONSE_BYTES} bytes`);
+    // The read stopped mid-body (and closed the stream) rather than draining
+    // every chunk into memory before checking the size.
+    expect(cancelled).toBe(true);
+    expect(pulled).toBeLessThan(totalChunks);
+  });
+
   it("summarizeYields falls back to empty arrays on oversized bodies", async () => {
     const fetchImpl = vi.fn(
       async () => new Response("x".repeat(MAX_RESPONSE_BYTES + 1), { status: 200 }),
