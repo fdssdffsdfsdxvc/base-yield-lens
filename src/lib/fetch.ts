@@ -197,6 +197,14 @@ function canonicalHostname(hostname: string): string {
 export function isNonPublicHostname(hostname: string): boolean {
   // Node may keep brackets on IPv6 hostnames ("[fd12::1]").
   const h = canonicalHostname(hostname).replace(/\.+$/, "").replace(/^\[|\]$/g, "");
+  // A percent-encoded (or malformed percent) suffix cannot turn a private host
+  // public: an invalid percent sequence survives canonicalization, so classify
+  // by the host prefix before the first "%" as well.
+  const percentIdx = h.indexOf("%");
+  if (percentIdx !== -1) {
+    const prefix = h.slice(0, percentIdx).replace(/\.+$/, "");
+    if (prefix && isNonPublicHostname(prefix)) return true;
+  }
   const mapped = embeddedIpv4Address(h);
   if (mapped) return isNonPublicHostname(mapped);
   // NAT64 local-use prefix 64:ff9b:1::/48 (RFC 8215) is site-local by definition.
