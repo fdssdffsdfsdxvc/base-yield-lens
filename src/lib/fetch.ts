@@ -40,7 +40,15 @@ const DEFAULT_BASE = "https://api.example.invalid/base-defi";
 function stripIpv6ZoneId(host: string): string {
   const pct = host.indexOf("%");
   if (pct === -1) return host;
-  return host.slice(0, pct);
+  // RFC 4007 zone ids only follow an IPv6 literal (which contains ":" or is
+  // bracketed). A "%" elsewhere is percent-encoding (e.g. "%31" for "1") and
+  // must be preserved so the URL parser can decode it instead of being
+  // truncated into an empty/different host.
+  const before = host.slice(0, pct);
+  if (!before.includes(":") && !before.includes("]")) return host;
+  // A trailing dot may sit between the address and the zone separator
+  // ("::1.%eth0"); drop it along with the zone id.
+  return before.replace(/\.+$/, "");
 }
 
 /**
@@ -136,7 +144,7 @@ function canonicalHostname(hostname: string): string {
   const hostInput = hostname.includes("@")
     ? hostname.slice(hostname.lastIndexOf("@") + 1)
     : hostname;
-  const raw = hostInput.trim().toLowerCase().replace(/\.(?=%)/g, "").replace(/\.+$/, "");
+  const raw = hostInput.trim().toLowerCase().replace(/\.+$/, "");
   const bracketedRaw = /^\[([^\]]+)\](?::\d{1,5})?$/.exec(raw);
   const working = bracketedRaw ? raw : stripIpv6ZoneId(raw);
   const bracketed = bracketedRaw ?? /^\[([^\]]+)\](?::\d{1,5})?$/.exec(working);
