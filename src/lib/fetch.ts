@@ -164,15 +164,18 @@ function canonicalHostname(hostname: string): string {
   const hostInput = stripEmbeddedUserInfo(hostname);
   const authorityInput = hostInput.split(/[\\/?#]/)[0] ?? hostInput;
   const raw = authorityInput.trim().toLowerCase().replace(/\.+$/, "");
-  const bracketedRaw = /^\[([^\]]+)\](?::\d{1,5})?$/.exec(raw);
+  const bracketedRaw = /^\[([^\]]+)\](?::.*)?$/.exec(raw);
   const working = bracketedRaw ? raw : stripIpv6ZoneId(raw);
-  const bracketed = bracketedRaw ?? /^\[([^\]]+)\](?::\d{1,5})?$/.exec(working);
+  const bracketed = bracketedRaw ?? /^\[([^\]]+)\](?::.*)?$/.exec(working);
   const zoneFree = bracketed ? working : stripIpv6ZoneId(working);
   // Exactly one colon separates host from port here, so a bare IPv6 hextet
   // list ("2001:db8::1", "0:0:0:0:0:0:0:1") is never mistaken for a port.
+  // Any suffix after that single colon (or after a closing bracket) is treated
+  // as a port and stripped, even when it is not a valid 1-5 digit port, so an
+  // out-of-range/over-long/non-numeric port cannot mask the host behind it.
   const host0 = bracketed
     ? bracketed[1]!
-    : /^[^[\]:]+:\d{1,5}$/.test(zoneFree)
+    : /^[^[\]:]+:[^:]*$/.test(zoneFree)
       ? zoneFree.slice(0, zoneFree.lastIndexOf(":"))
       : zoneFree;
   const bare = stripIpv6ZoneId(host0.replace(/^\[|\]$/g, ""));
