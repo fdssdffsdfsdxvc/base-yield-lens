@@ -48,8 +48,9 @@ function stripIpv6ZoneId(host: string): string {
  * Node URL.hostname often rewrites dotted form to two hextets ("[::ffff:7f00:1]").
  */
 export function ipv4MappedAddress(hostname: string): string | null {
+  const hostInput = hostname.includes("@") ? hostname.slice(hostname.lastIndexOf("@") + 1) : hostname;
   const h = stripIpv6ZoneId(
-    hostname.toLowerCase().replace(/\.$/, "").replace(/^\[|\]$/g, ""),
+    hostInput.toLowerCase().replace(/\.$/, "").replace(/^\[|\]$/g, ""),
   );
   const dotted = /^::ffff:(\d{1,3}(?:\.\d{1,3}){3})$/i.exec(h);
   if (dotted) return dotted[1]!;
@@ -64,7 +65,8 @@ export function ipv4MappedAddress(hostname: string): string | null {
 
 /** Expand an IPv6 literal (optional brackets / dotted IPv4 tail) to 8 hextets, else null. */
 export function expandIpv6(hostname: string): number[] | null {
-  let h = stripIpv6ZoneId(hostname.toLowerCase().replace(/^\[|\]$/g, ""));
+  const hostInput = hostname.includes("@") ? hostname.slice(hostname.lastIndexOf("@") + 1) : hostname;
+  let h = stripIpv6ZoneId(hostInput.toLowerCase().replace(/^\[|\]$/g, ""));
   if (!h.includes(":")) return null;
   const tail = /^(.*:)(\d{1,3}(?:\.\d{1,3}){3})$/.exec(h);
   if (tail) {
@@ -129,7 +131,12 @@ export function embeddedIpv4Address(hostname: string): string | null {
  * Unparseable input falls back to the lowercased original.
  */
 function canonicalHostname(hostname: string): string {
-  const raw = hostname.trim().toLowerCase().replace(/\.(?=%)/g, "").replace(/\.+$/, "");
+  // Drop any embedded userinfo ("user:pass@host") so credentials cannot mask
+  // the host that is actually being classified.
+  const hostInput = hostname.includes("@")
+    ? hostname.slice(hostname.lastIndexOf("@") + 1)
+    : hostname;
+  const raw = hostInput.trim().toLowerCase().replace(/\.(?=%)/g, "").replace(/\.+$/, "");
   const bracketedRaw = /^\[([^\]]+)\](?::\d{1,5})?$/.exec(raw);
   const working = bracketedRaw ? raw : stripIpv6ZoneId(raw);
   const bracketed = bracketedRaw ?? /^\[([^\]]+)\](?::\d{1,5})?$/.exec(working);
