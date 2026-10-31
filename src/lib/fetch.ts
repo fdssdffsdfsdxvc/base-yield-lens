@@ -51,12 +51,32 @@ function stripIpv6ZoneId(host: string): string {
   return before.replace(/\.+$/, "");
 }
 
+
+/**
+ * Drop an embedded userinfo ("user:pass@host") from a host string so
+ * credentials cannot mask the host that is actually being classified. Only
+ * an "@" that appears before any authority delimiter (/, \, ?, #) is treated
+ * as userinfo: an "@" later in the path/query/fragment belongs to that part
+ * and must not truncate a private host into a public-looking one.
+ */
+function stripEmbeddedUserInfo(host: string): string {
+  const delimiters = ["/", "\\", "?", "#"];
+  let firstDelim = host.length;
+  for (const d of delimiters) {
+    const i = host.indexOf(d);
+    if (i !== -1 && i < firstDelim) firstDelim = i;
+  }
+  const authority = host.slice(0, firstDelim);
+  const at = authority.lastIndexOf("@");
+  if (at !== -1) return authority.slice(at + 1);
+  return authority;
+}
 /**
  * If hostname is IPv4-mapped IPv6 (::ffff:…), return the embedded IPv4 string.
  * Node URL.hostname often rewrites dotted form to two hextets ("[::ffff:7f00:1]").
  */
 export function ipv4MappedAddress(hostname: string): string | null {
-  const hostInput = hostname.includes("@") ? hostname.slice(hostname.lastIndexOf("@") + 1) : hostname;
+  const hostInput = stripEmbeddedUserInfo(hostname);
   const h = stripIpv6ZoneId(
     hostInput.toLowerCase().replace(/\.$/, "").replace(/^\[|\]$/g, ""),
   );
@@ -73,7 +93,7 @@ export function ipv4MappedAddress(hostname: string): string | null {
 
 /** Expand an IPv6 literal (optional brackets / dotted IPv4 tail) to 8 hextets, else null. */
 export function expandIpv6(hostname: string): number[] | null {
-  const hostInput = hostname.includes("@") ? hostname.slice(hostname.lastIndexOf("@") + 1) : hostname;
+  const hostInput = stripEmbeddedUserInfo(hostname);
   let h = stripIpv6ZoneId(hostInput.toLowerCase().replace(/^\[|\]$/g, ""));
   if (!h.includes(":")) return null;
   const tail = /^(.*:)(\d{1,3}(?:\.\d{1,3}){3})$/.exec(h);
@@ -141,10 +161,9 @@ export function embeddedIpv4Address(hostname: string): string | null {
 function canonicalHostname(hostname: string): string {
   // Drop any embedded userinfo ("user:pass@host") so credentials cannot mask
   // the host that is actually being classified.
-  const hostInput = hostname.includes("@")
-    ? hostname.slice(hostname.lastIndexOf("@") + 1)
-    : hostname;
-  const raw = hostInput.trim().toLowerCase().replace(/\.+$/, "");
+  const hostInput = stripEmbeddedUserInfo(hostname);
+  const authorityInput = hostInput.split(/[\\/?#]/)[0] ?? hostInput;
+  const raw = authorityInput.trim().toLowerCase().replace(/\.+$/, "");
   const bracketedRaw = /^\[([^\]]+)\](?::\d{1,5})?$/.exec(raw);
   const working = bracketedRaw ? raw : stripIpv6ZoneId(raw);
   const bracketed = bracketedRaw ?? /^\[([^\]]+)\](?::\d{1,5})?$/.exec(working);
