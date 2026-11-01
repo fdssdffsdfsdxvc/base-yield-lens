@@ -445,8 +445,8 @@ function asOfString(value: unknown): string {
 /** Drop nulls / non-objects / arrays; coerce fields so formatSummary never crashes; cap rows at MAX_SUMMARY_ROWS. */
 export function normalizePools(value: unknown): PoolSnapshot[] {
   return asArray(value)
-    .slice(0, MAX_SUMMARY_ROWS)
     .filter(isRecord)
+    .slice(0, MAX_SUMMARY_ROWS)
     .map((v) => ({
       protocol: fmtLabel(v.protocol),
       poolId: fmtLabel(v.poolId),
@@ -459,8 +459,8 @@ export function normalizePools(value: unknown): PoolSnapshot[] {
 
 export function normalizeLending(value: unknown): LendingSnapshot[] {
   return asArray(value)
-    .slice(0, MAX_SUMMARY_ROWS)
     .filter(isRecord)
+    .slice(0, MAX_SUMMARY_ROWS)
     .map((v) => ({
       protocol: fmtLabel(v.protocol),
       market: fmtLabel(v.market),
