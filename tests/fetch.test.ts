@@ -878,6 +878,39 @@ describe("isNonPublicHostname", () => {
     // A public scoped address stays public.
     expect(isNonPublicHostname("[2606:4700::1111%25eth0]")).toBe(false);
   });
+
+  it("classifies hosts with an unparseable forbidden-code-point suffix by their prefix", () => {
+    // Controls, space, colon, angles, brackets, backslash, caret, and pipe are
+    // forbidden WHATWG host code points: they make URL canonicalization fall
+    // back to the raw string, so a suffix after them cannot mask a private
+    // prefix (previously classified public).
+    for (const host of [
+      "127.0.0.1\t[::1]",
+      "[::1]\t127.0.0.1",
+      "127.0.0.1\u0000evil",
+      "127.0.0.1\nevil",
+      "127.0.0.1\revil",
+      "127.0.0.1 evil",
+      "localhost\tfoo",
+      "10.0.0.1|evil",
+      "::ffff:7f00:1\tfoo",
+      "10.0.0.1:8080:9999",
+      "127.0.0.1^evil",
+      "127.0.0.1<evil>",
+      "127.0.0.1]evil",
+    ]) {
+      expect(isNonPublicHostname(host), host).toBe(true);
+    }
+    // Compressed IPv6 prefixes behind the colon stay intact (main checks).
+    expect(isNonPublicHostname("fd12::1\tfoo")).toBe(true);
+    expect(isNonPublicHostname("fe80::1%eth0\tfoo")).toBe(true);
+    // A public host facing a forbidden suffix is not over-masked: only the
+    // prefix is classified, and a public prefix stays public.
+    expect(isNonPublicHostname("8.8.8.8\t[fd00::1]")).toBe(false);
+    expect(isNonPublicHostname("example.com\tfoo")).toBe(false);
+    // A forbidden code point inside a DNS name is meaningless either way.
+    expect(isNonPublicHostname("api\texample.com")).toBe(false);
+  });
 });
 
 describe("fmtLabel", () => {

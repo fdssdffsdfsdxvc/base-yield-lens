@@ -197,12 +197,16 @@ function canonicalHostname(hostname: string): string {
 export function isNonPublicHostname(hostname: string): boolean {
   // Node may keep brackets on IPv6 hostnames ("[fd12::1]").
   const h = canonicalHostname(hostname).replace(/\.+$/, "").replace(/^\[|\]$/g, "");
-  // A percent-encoded (or malformed percent) suffix cannot turn a private host
-  // public: an invalid percent sequence survives canonicalization, so classify
-  // by the host prefix before the first "%" as well.
-  const percentIdx = h.indexOf("%");
-  if (percentIdx !== -1) {
-    const prefix = h.slice(0, percentIdx).replace(/\.+$/, "");
+  // Forbidden WHATWG host code points (controls, space, colon, angles, brackets,
+  // backslash, caret, pipe) and percent make a raw hostname unparseable: URL
+  // parsing then falls back to the raw string, so a suffix after the first such
+  // character cannot turn a private host public — classify by the prefix before
+  // it, too. Valid URL-derived hostnames never contain these, and compressed
+  // IPv6 literals ("::1", "fd12::1", "2606:4700::1111") are unaffected because
+  // their colon prefix classifies public.
+  const forbiddenIdx = h.search(/[\u0000-\u0020<>:[\]\\^|%]/);
+  if (forbiddenIdx !== -1) {
+    const prefix = h.slice(0, forbiddenIdx).replace(/\.+$/, "");
     if (prefix && isNonPublicHostname(prefix)) return true;
   }
   const mapped = embeddedIpv4Address(h);
