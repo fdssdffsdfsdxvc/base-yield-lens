@@ -197,22 +197,35 @@ function canonicalHostname(hostname: string): string {
 export function isNonPublicHostname(hostname: string): boolean {
   // Node may keep brackets on IPv6 hostnames ("[fd12::1]").
   const h = canonicalHostname(hostname).replace(/\.+$/, "").replace(/^\[|\]$/g, "");
-  // Forbidden WHATWG host code points (controls, space, colon, angles, brackets,
+  const v6 = expandIpv6(h);
+  // Forbidden WHATWG host code points (controls, space, angles, brackets,
   // backslash, caret, pipe) and percent make a raw hostname unparseable: URL
   // parsing then falls back to the raw string, so a suffix after the first such
   // character cannot turn a private host public — classify by the prefix before
-  // it, too. Valid URL-derived hostnames never contain these, and compressed
-  // IPv6 literals ("::1", "fd12::1", "2606:4700::1111") are unaffected because
-  // their colon prefix classifies public.
-  const forbiddenIdx = h.search(/[\u0000-\u0020<>:[\]\\^|%]/);
-  if (forbiddenIdx !== -1) {
-    const prefix = h.slice(0, forbiddenIdx).replace(/\.+$/, "");
-    if (prefix && isNonPublicHostname(prefix)) return true;
+  // it, too. Check the raw authority, not the canonical h: the URL parser
+  // silently removes TAB/CR/LF (joining "127.0.0.1\nevil" into "127.0.0.1evil")
+  // instead of failing. Skip this for a well-formed IPv6 literal: its colons
+  // are structural, and canonicalizing just the first hextet as an IPv4
+  // shorthand ("2606" → 0.0.10.46) would wrongly reject public addresses.
+  const rawHost = stripEmbeddedUserInfo(hostname);
+  if (!v6) {
+    const forbiddenIdx = rawHost.search(/[\u0000-\u0020<>\]\\^|%]/);
+    if (forbiddenIdx !== -1) {
+      const prefix = rawHost.slice(0, forbiddenIdx).replace(/\.+$/, "");
+      if (prefix && isNonPublicHostname(prefix)) return true;
+    } else {
+      // Not valid IPv6 but still colon-bearing (e.g. "10.0.0.1:8080:9999"):
+      // treat the first colon as the host/port boundary and classify the host.
+      const colonIdx = h.indexOf(":");
+      if (colonIdx > 0) {
+        const prefix = h.slice(0, colonIdx).replace(/\.+$/, "");
+        if (prefix && isNonPublicHostname(prefix)) return true;
+      }
+    }
   }
   const mapped = embeddedIpv4Address(h);
   if (mapped) return isNonPublicHostname(mapped);
   // NAT64 local-use prefix 64:ff9b:1::/48 (RFC 8215) is site-local by definition.
-  const v6 = expandIpv6(h);
   if (v6 && v6[0] === 0x64 && v6[1] === 0xff9b && v6[2] === 1) return true;
   // IPv6 multicast ff00::/8 (first hextet ffXX), the counterpart of IPv4 224/4.
   if (v6 && v6[0]! >> 8 === 0xff) return true;
