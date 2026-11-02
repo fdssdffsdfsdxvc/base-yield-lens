@@ -512,6 +512,9 @@ export async function fetchJson<T>(
     redirect: "error",
   });
   if (!res.ok) {
+    // The body was never consumed; cancel it so it also releases the
+    // connection instead of lingering on the (dead) status-promise payload.
+    await res.body?.cancel().catch(() => {});
     // Mask embedded userinfo so a caller-supplied URL cannot leak secrets in
     // the error (summarizeYields validates its base, but fetchJson is public).
     throw new Error(`HTTP ${res.status} for ${redactUrlCredentials(url)}`);
@@ -519,6 +522,7 @@ export async function fetchJson<T>(
   const tooLarge = `HTTP body exceeds ${MAX_RESPONSE_BYTES} bytes for ${redactUrlCredentials(url)}`;
   const declared = Number.parseInt(res.headers.get("content-length") ?? "", 10);
   if (Number.isFinite(declared) && declared > MAX_RESPONSE_BYTES) {
+    await res.body?.cancel().catch(() => {});
     throw new Error(tooLarge);
   }
   // Stream the body so a chunked / unknown-length response cannot fill the heap

@@ -278,6 +278,43 @@ describe("fetchJson", () => {
     );
   });
 
+  it("cancels the unconsumed body on non-OK and oversize-by-content-length responses", async () => {
+    // An unconsumed Response body keeps the underlying connection until GC;
+    // fetchJson must cancel it explicitly when it never streams the body.
+    const makeBody = (flags: { cancelled: boolean }) => {
+      const stream = new ReadableStream<Uint8Array>({
+        pull(controller) {
+          controller.enqueue(new TextEncoder().encode("payload"));
+        },
+        cancel() {
+          flags.cancelled = true;
+        },
+      });
+      return stream;
+    };
+
+    const nonOk = { cancelled: false };
+    const fetchImpl = vi.fn(
+      async () => new Response(makeBody(nonOk), { status: 503 }),
+    ) as unknown as typeof fetch;
+    await expect(
+      fetchJson("https://mock.test/unavailable", fetchImpl),
+    ).rejects.toThrow("HTTP 503");
+    expect(nonOk.cancelled).toBe(true);
+
+    const oversized = { cancelled: false };
+    const lengthFetch = vi.fn(async () =>
+      new Response(makeBody(oversized), {
+        status: 200,
+        headers: { "content-length": String(MAX_RESPONSE_BYTES + 1) },
+      }),
+    ) as unknown as typeof fetch;
+    await expect(
+      fetchJson("https://mock.test/big", lengthFetch),
+    ).rejects.toThrow(`HTTP body exceeds ${MAX_RESPONSE_BYTES} bytes`);
+    expect(oversized.cancelled).toBe(true);
+  });
+
   it("rejects a chunked body that exceeds the cap once read", async () => {
     const fetchImpl = vi.fn(
       async () => new Response("x".repeat(MAX_RESPONSE_BYTES + 1), { status: 200 }),
