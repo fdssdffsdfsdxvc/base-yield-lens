@@ -6,6 +6,12 @@ on:
   pull_request:
     branches: [main]
 
+# One run per ref: a new push/PR update cancels the superseded in-flight run
+# instead of stacking duplicate runs on the runner.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 # Least-privilege GITHUB_TOKEN: CI only reads the repo (no write scopes needed).
 permissions:
   contents: read
