@@ -209,7 +209,15 @@ export function isNonPublicHostname(hostname: string): boolean {
   // shorthand ("2606" → 0.0.10.46) would wrongly reject public addresses.
   const rawHost = stripEmbeddedUserInfo(hostname);
   if (!v6) {
-    const forbiddenIdx = rawHost.search(/[\u0000-\u0020<>\]\\^|%]/);
+    const forbiddenRegex = /[\u0000-\u0020<>\[\]\\^|%{}|\u007f-\u009f]/;
+    // A leading "[" opens a bracketed IPv6 literal and must not itself be
+    // treated as a forbidden suffix boundary (otherwise "[::1]..." could never
+    // be classified by its prefix).
+    let forbiddenIdx = rawHost.search(forbiddenRegex);
+    if (forbiddenIdx === 0 && rawHost.startsWith("[")) {
+      const rest = rawHost.slice(1).search(forbiddenRegex);
+      forbiddenIdx = rest === -1 ? -1 : rest + 1;
+    }
     if (forbiddenIdx !== -1) {
       const prefix = rawHost.slice(0, forbiddenIdx).replace(/\.+$/, "");
       if (prefix && isNonPublicHostname(prefix)) return true;
