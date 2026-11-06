@@ -210,16 +210,20 @@ export function isNonPublicHostname(hostname: string): boolean {
   const rawHost = stripEmbeddedUserInfo(hostname);
   if (!v6) {
     const forbiddenRegex = /[\u0000-\u0020<>"`\[\]\\^|%{}|\u007f-\u009f]/;
+    // URL parsers normalize many fullwidth/homoglyph code points to the ASCII
+    // forbidden host code points above (e.g. U+FF02 -> `"`, U+FF40 -> "`"),
+    // so classify on the NFKC-normalized authority to catch those variants too.
+    const normalizedRawHost = rawHost.normalize("NFKC");
     // A leading "[" opens a bracketed IPv6 literal and must not itself be
     // treated as a forbidden suffix boundary (otherwise "[::1]..." could never
     // be classified by its prefix).
-    let forbiddenIdx = rawHost.search(forbiddenRegex);
-    if (forbiddenIdx === 0 && rawHost.startsWith("[")) {
-      const rest = rawHost.slice(1).search(forbiddenRegex);
+    let forbiddenIdx = normalizedRawHost.search(forbiddenRegex);
+    if (forbiddenIdx === 0 && normalizedRawHost.startsWith("[")) {
+      const rest = normalizedRawHost.slice(1).search(forbiddenRegex);
       forbiddenIdx = rest === -1 ? -1 : rest + 1;
     }
     if (forbiddenIdx !== -1) {
-      const prefix = rawHost.slice(0, forbiddenIdx).replace(/\.+$/, "");
+      const prefix = normalizedRawHost.slice(0, forbiddenIdx).replace(/\\.+$/, "");
       if (prefix && isNonPublicHostname(prefix)) return true;
     } else {
       // Not valid IPv6 but still colon-bearing (e.g. "10.0.0.1:8080:9999"):
