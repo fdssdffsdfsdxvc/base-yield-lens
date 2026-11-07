@@ -209,7 +209,13 @@ export function isNonPublicHostname(hostname: string): boolean {
   // shorthand ("2606" → 0.0.10.46) would wrongly reject public addresses.
   const rawHost = stripEmbeddedUserInfo(hostname);
   if (!v6) {
-    const forbiddenRegex = /[\u0000-\u0020<>"`\[\]\\^|%{}|\u007f-\u009f]/;
+    // Forbidden WHATWG host code points (controls, space, angles, brackets,
+    // backslash, caret, pipe) plus quotes, backticks, braces, and other
+    // punctuation that Node's URL parser keeps in the host (so a suffix after
+    // one cannot turn a private prefix public): classify by the prefix before
+    // the first such character. Colon is deliberately excluded so IPv6 literals
+    // keep their structural colons; port-style colons are handled below.
+    const forbiddenRegex = /[\u0000-\u0020<>"`\[\]\\^|%{}!$&'()*+,;=_~|\u007f-\u009f]/;
     // URL parsers normalize many fullwidth/homoglyph code points to the ASCII
     // forbidden host code points above (e.g. U+FF02 -> `"`, U+FF40 -> "`"),
     // so classify on the NFKC-normalized authority to catch those variants too.
@@ -223,7 +229,7 @@ export function isNonPublicHostname(hostname: string): boolean {
       forbiddenIdx = rest === -1 ? -1 : rest + 1;
     }
     if (forbiddenIdx !== -1) {
-      const prefix = normalizedRawHost.slice(0, forbiddenIdx).replace(/\\.+$/, "");
+      const prefix = normalizedRawHost.slice(0, forbiddenIdx).replace(/\.+$/, "");
       if (prefix && isNonPublicHostname(prefix)) return true;
     } else {
       // Not valid IPv6 but still colon-bearing (e.g. "10.0.0.1:8080:9999"):
