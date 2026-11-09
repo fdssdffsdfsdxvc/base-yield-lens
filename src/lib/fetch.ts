@@ -215,7 +215,7 @@ export function isNonPublicHostname(hostname: string): boolean {
     // one cannot turn a private prefix public): classify by the prefix before
     // the first such character. Colon is deliberately excluded so IPv6 literals
     // keep their structural colons; port-style colons are handled below.
-    const forbiddenRegex = /[\u0000-\u0020<>"`\[\]\\^|%{}!$&'()*+,;=_~|\u007f-\u009f]/;
+    const forbiddenRegex = /[\u0000-\u0020<>"`\[\]\\^|%{}!$&'()*+,;=_~|\u007f-\u009f\u2028\u2029\u202a-\u202e\u2066-\u2069]/;
     // URL parsers normalize many fullwidth/homoglyph code points to the ASCII
     // forbidden host code points above (e.g. U+FF02 -> `"`, U+FF40 -> "`"),
     // so classify on the NFKC-normalized authority to catch those variants too.
