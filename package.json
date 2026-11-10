@@ -32,6 +32,14 @@
     "typescript"
   ],
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/fdssdffsdfsdxvc/base-yield-lens.git"
+  },
+  "homepage": "https://github.com/fdssdffsdfsdxvc/base-yield-lens#readme",
+  "bugs": {
+    "url": "https://github.com/fdssdffsdfsdxvc/base-yield-lens/issues"
+  },
   "engines": {
     "node": ">=18"
   },

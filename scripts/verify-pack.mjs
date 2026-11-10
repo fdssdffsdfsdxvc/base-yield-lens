@@ -98,11 +98,27 @@ try {
       `pack package.json engines.node must be ">=18": ${JSON.stringify(pkg.engines)}`,
     );
   }
+  const expectedRepo = "git+https://github.com/fdssdffsdfsdxvc/base-yield-lens.git";
+  if (pkg.repository?.type !== "git" || pkg.repository?.url !== expectedRepo) {
+    throw new Error(
+      `pack package.json repository must be ${expectedRepo}: ${JSON.stringify(pkg.repository)}`,
+    );
+  }
+  if (pkg.homepage !== "https://github.com/fdssdffsdfsdxvc/base-yield-lens#readme") {
+    throw new Error(
+      `pack package.json homepage must point at the README: ${JSON.stringify(pkg.homepage)}`,
+    );
+  }
+  if (pkg.bugs?.url !== "https://github.com/fdssdffsdfsdxvc/base-yield-lens/issues") {
+    throw new Error(
+      `pack package.json bugs.url must point at issues: ${JSON.stringify(pkg.bugs)}`,
+    );
+  }
 
   console.log(
     "verify-pack: ok —",
     required.join(", "),
-    "+ bin + files + exports + license + engines + prepack",
+    "+ bin + files + exports + license + engines + prepack + repository metadata",
   );
 } finally {
   rmSync(dir, { recursive: true, force: true });
