@@ -67,9 +67,7 @@ function stripEmbeddedUserInfo(host: string): string {
     if (i !== -1 && i < firstDelim) firstDelim = i;
   }
   const authority = host.slice(0, firstDelim);
-  let at = authority.lastIndexOf("@");
-  const fw = authority.lastIndexOf("＠");
-  if (fw > at) at = fw;
+  const at = authority.lastIndexOf("@");
   if (at !== -1) return authority.slice(at + 1);
   return authority;
 }
