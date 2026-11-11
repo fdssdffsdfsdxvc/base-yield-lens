@@ -21,7 +21,7 @@ export type ParsedCliArgs = { help: boolean };
  * could recolor/clear the screen, and CR/LF/U+2028/U+2029 could forge extra
  * error lines.
  */
-const UNSAFE_TERMINAL_CHARS = /[\u0000-\u001f\u007f-\u009f\u2028\u2029\u202a-\u202e\u2066-\u2069\u00ad\u034f\u180b-\u180d\u180f\u200b\u2060\u2064\ufe00-\ufe0f\ufeff\u{1bca0}-\u{1bca3}\u{e0100}-\u{e01ef}\s\p{Cf}\p{Default_Ignorable_Code_Point}]+/gu;
+const UNSAFE_TERMINAL_CHARS = /[\u0000-\u001f\u007f-\u009f\u2028\u2029\u202a-\u202e\u2066-\u2069\u00ad\u034f\u180b-\u180d\u180f\u200b\u2060\u2064\ufe00-\ufe0f\ufeff\u{1bca0}-\u{1bca3}\u{e0100}-\u{e01ef}\s\p{Cf}\p{Co}\p{Cn}\p{Cs}\p{Default_Ignorable_Code_Point}]+/gu;
 
 /**
  * Neutralize control characters in error text before it is printed to stderr.
