@@ -67,7 +67,9 @@ function stripEmbeddedUserInfo(host: string): string {
     if (i !== -1 && i < firstDelim) firstDelim = i;
   }
   const authority = host.slice(0, firstDelim);
-  const at = authority.lastIndexOf("@");
+  let at = authority.lastIndexOf("@");
+  const fw = authority.lastIndexOf("＠");
+  if (fw > at) at = fw;
   if (at !== -1) return authority.slice(at + 1);
   return authority;
 }
@@ -162,7 +164,7 @@ function canonicalHostname(hostname: string): string {
   // Drop any embedded userinfo ("user:pass@host") so credentials cannot mask
   // the host that is actually being classified.
   const hostInput = stripEmbeddedUserInfo(hostname);
-  const authorityInput = hostInput.split(/[\\/?#]/)[0] ?? hostInput;
+  const authorityInput = hostInput.split(/[\\/?#／＼？＃]/)[0] ?? hostInput;
   const raw = authorityInput.trim().toLowerCase().replace(/\.+$/, "");
   const bracketedRaw = /^\[([^\]]+)\](?:\.+)?(?::.*)?$/.exec(raw);
   const working = bracketedRaw ? raw : stripIpv6ZoneId(raw);
@@ -215,7 +217,7 @@ export function isNonPublicHostname(hostname: string): boolean {
     // one cannot turn a private prefix public): classify by the prefix before
     // the first such character. Colon is deliberately excluded so IPv6 literals
     // keep their structural colons; port-style colons are handled below.
-    const forbiddenRegex = /[\u0000-\u0020<>"`\[\]\\^|%{}!$&'()*+,;=_~|\u007f-\u009f\u2028\u2029\u202a-\u202e\u2066-\u2069\u00ad\u034f\u180b-\u180d\u180f\u200b\u2060\u2064\ufe00-\ufe0f\ufeff\u{1bca0}-\u{1bca3}\u{e0100}-\u{e01ef}\s\p{Cf}\p{Co}\p{Cn}\p{Cs}\p{Default_Ignorable_Code_Point}]/u;
+    const forbiddenRegex = /[\u0000-\u0020<>"`\[\]\\^|%{}!$&'()*+,;=_~#?\/@|\u007f-\u009f\u2028\u2029\u202a-\u202e\u2066-\u2069\u00ad\u034f\u180b-\u180d\u180f\u200b\u2060\u2064\ufe00-\ufe0f\ufeff\u{1bca0}-\u{1bca3}\u{e0100}-\u{e01ef}\s\p{Cf}\p{Co}\p{Cn}\p{Cs}\p{Default_Ignorable_Code_Point}]/u;
     // URL parsers normalize many fullwidth/homoglyph code points to the ASCII
     // forbidden host code points above (e.g. U+FF02 -> `"`, U+FF40 -> "`"),
     // so classify on the NFKC-normalized authority to catch those variants too.
