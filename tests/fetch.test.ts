@@ -442,6 +442,9 @@ describe("resolveBaseUrl", () => {
     expect(resolveBaseUrl("")).toBe(fallback);
     expect(resolveBaseUrl("   ")).toBe(fallback);
     expect(resolveBaseUrl("\t\n")).toBe(fallback);
+    expect(resolveBaseUrl("/")).toBe(fallback);
+    expect(resolveBaseUrl("///")).toBe(fallback);
+    expect(resolveBaseUrl(" / ")).toBe(fallback);
   });
 
   it("trims and strips trailing slashes", () => {

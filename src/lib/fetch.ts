@@ -396,6 +396,7 @@ export function resolveBaseUrl(baseUrl?: string): string {
   const trimmed = baseUrl?.trim() ?? "";
   if (!trimmed) return DEFAULT_BASE;
   const stripped = trimmed.replace(/\/+$/, "");
+  if (!stripped) return DEFAULT_BASE;
   assertPublicHttpsBaseUrl(stripped);
   return stripped;
 }
