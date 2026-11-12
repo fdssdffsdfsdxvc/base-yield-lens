@@ -1590,6 +1590,10 @@ describe("expandIpv6", () => {
   it("returns null for invalid IPv6", () => {
     expect(expandIpv6("not-an-ipv6")).toBeNull();
     expect(expandIpv6("")).toBeNull();
+    expect(expandIpv6("1::2::3")).toBeNull();
+    expect(expandIpv6("1:2:3:4:5:6:7:8:9")).toBeNull();
+    expect(expandIpv6("gggg::1")).toBeNull();
+    expect(expandIpv6("12345::1")).toBeNull();
   });
 
   it("expands IPv6 with leading zeros stripped", () => {
