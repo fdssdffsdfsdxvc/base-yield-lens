@@ -7,6 +7,7 @@ import {
   MAX_RESPONSE_BYTES,
   MAX_SUMMARY_ROWS,
   assertPublicHttpsBaseUrl,
+  capUntrustedText,
   embeddedIpv4Address,
   expandIpv6,
   fetchJson,
@@ -1372,6 +1373,32 @@ describe("normalizePools / normalizeLending", () => {
     expect(text).toContain("[?] ? supply=1.00% borrow=?%");
     expect(text).not.toContain("undefined");
     expect(text).not.toContain("null");
+  });
+});
+
+
+describe("capUntrustedText", () => {
+  it("neutralizes unsafe control chars and trims", () => {
+    expect(capUntrustedText("  2026-09-26T07:00:00.000Z  ")).toBe(
+      "2026-09-26T07:00:00.000Z",
+    );
+    expect(capUntrustedText("\u001b[31mtime\u001b[0m\nline")).toBe(
+      "[31mtime [0m line",
+    );
+    expect(capUntrustedText("a\u2028b\u2029c")).toBe("a b c");
+  });
+
+  it("caps length with surrogate-safe truncation", () => {
+    const long = "t".repeat(MAX_LABEL_LENGTH + 20);
+    const capped = capUntrustedText(long);
+    expect(capped).toHaveLength(MAX_LABEL_LENGTH);
+    expect(capped.endsWith("…")).toBe(true);
+
+    const emoji = "😀".repeat(80);
+    const emojiCapped = capUntrustedText(emoji);
+    expect(emojiCapped.length).toBeLessThanOrEqual(MAX_LABEL_LENGTH);
+    expect(emojiCapped.endsWith("…")).toBe(true);
+    expect(/[\ud800-\udbff]$/.test(emojiCapped.slice(0, -1))).toBe(false);
   });
 });
 
