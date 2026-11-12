@@ -885,6 +885,43 @@ describe("isNonPublicHostname", () => {
     expect(isNonPublicHostname("[2001:4::1]")).toBe(false);
   });
 
+  it("flags IPv6 Drone Remote ID Protocol Entity Tags 2001:30::/28 addresses", () => {
+    // DRIP Entity Tags (RFC 9374) are IANA special-purpose and not globally
+    // reachable.
+    for (const host of [
+      "[2001:30::1]",
+      "2001:0030:0000::1",
+      "[2001:3f::1]",
+      "[2001:30::]:8080",
+    ]) {
+      expect(isNonPublicHostname(host), host).toBe(true);
+    }
+    expect(() => assertPublicHttpsBaseUrl("https://[2001:30::1]/base-defi")).toThrow(
+      /must not target a private host/,
+    );
+    // Neighbours of the /28 stay public (2001:20::/28 below is ORCHIDv2).
+    expect(isNonPublicHostname("[2001:0f::1]")).toBe(false);
+    expect(isNonPublicHostname("[2001:40::1]")).toBe(false);
+  });
+
+  it("flags IPv6 ORCHID and SRv6 special-purpose prefixes", () => {
+    for (const host of [
+      "[2001:10::1]",
+      "[2001:1f::1]",
+      "[2001:20::1]",
+      "[2001:2f::1]",
+      "[5f00::1]",
+      "5f00:0000:0000::1",
+      "[5f00:1:2::3]:8080",
+    ]) {
+      expect(isNonPublicHostname(host), host).toBe(true);
+    }
+    expect(isNonPublicHostname("[2001:f::1]")).toBe(false);
+    expect(isNonPublicHostname("[2001:40::1]")).toBe(false);
+    expect(isNonPublicHostname("[5eff:ffff::1]")).toBe(false);
+    expect(isNonPublicHostname("[6000::1]")).toBe(false);
+  });
+
   it("flags IPv6 multicast ff00::/8 hosts like IPv4 multicast", () => {
     for (const host of ["ff02::1", "[ff05::1:3]", "FF0E::101", "[ff02:0:0:0:0:0:0:1]"]) {
       expect(isNonPublicHostname(host), host).toBe(true);
