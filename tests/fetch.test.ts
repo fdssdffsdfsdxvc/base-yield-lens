@@ -1482,11 +1482,12 @@ describe("fetch timeout", () => {
     expect(DEFAULT_FETCH_TIMEOUT_MS).toBeGreaterThan(0);
   });
 
-  it("falls back to the default timeout for negative/non-finite/fractional timeoutMs", async () => {
-    // AbortSignal.timeout throws RangeError for each of these; fetchJson must
-    // coerce them to the default instead of crashing synchronously (which
-    // would break the offline-friendly summarizeYields fallback).
-    const bad = [-1, Number.NaN, Number.POSITIVE_INFINITY, 1.5];
+  it("falls back to the default timeout for negative/non-finite/fractional/overflow timeoutMs", async () => {
+    // AbortSignal.timeout throws RangeError for each of these (and values above
+    // 2^31-1 warn and clamp to 1 in Node); fetchJson must coerce them to the
+    // default instead of crashing synchronously (which would break the
+    // offline-friendly summarizeYields fallback).
+    const bad = [-1, Number.NaN, Number.POSITIVE_INFINITY, 1.5, 2_147_483_648, 5_000_000_000];
     const seen: (AbortSignal | null | undefined)[] = [];
     const recordingFetch = vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
       seen.push(init?.signal);

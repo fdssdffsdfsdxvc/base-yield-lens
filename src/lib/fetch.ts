@@ -529,12 +529,17 @@ export async function fetchJson<T>(
   fetchImpl: typeof fetch = fetch,
   timeoutMs: number = DEFAULT_FETCH_TIMEOUT_MS,
 ): Promise<T> {
-  // AbortSignal.timeout throws RangeError for negative, non-finite, or
-  // fractional delays; fall back to the default so a bad caller-supplied
+  // AbortSignal.timeout throws RangeError for negative, non-finite, fractional,
+  // or >2^31-1 delays (and values above 2^31-1 emit a TimeoutOverflowWarning and
+  // clamp to 1 in Node); fall back to the default so a bad caller-supplied
   // timeout keeps the offline-friendly failure path (summarizeYields catches
   // per-request rejections, but a synchronous throw would crash the CLI).
+  const MAX_TIMEOUT_MS = 2_147_483_647;
   const ms =
-    Number.isFinite(timeoutMs) && Number.isInteger(timeoutMs) && timeoutMs >= 0
+    Number.isFinite(timeoutMs) &&
+    Number.isInteger(timeoutMs) &&
+    timeoutMs >= 0 &&
+    timeoutMs <= MAX_TIMEOUT_MS
       ? timeoutMs
       : DEFAULT_FETCH_TIMEOUT_MS;
   const res = await fetchImpl(url, {
