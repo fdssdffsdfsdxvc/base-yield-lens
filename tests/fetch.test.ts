@@ -844,13 +844,16 @@ describe("isNonPublicHostname", () => {
     expect(isNonPublicHostname("[4000::1]")).toBe(false);
   });
 
-  it("flags IPv6 discard-only 100::/64 and benchmarking 2001:2::/48 addresses", () => {
-    // Both are IANA special-purpose and not globally reachable (RFC 6666 /
-    // RFC 5180), like the IPv4 TEST-NET blocks already rejected above.
+  it("flags IPv6 discard-only 100::/64, dummy 100:0:0:1::/64, and benchmarking 2001:2::/48 addresses", () => {
+    // All are IANA special-purpose and not globally reachable (RFC 6666 /
+    // RFC 9780 / RFC 5180), like the IPv4 TEST-NET blocks already rejected above.
     for (const host of [
       "[100::1]",
       "100:0:0:0:1::",
       "[100::1]:8080",
+      "[100:0:0:1::]",
+      "100:0:0:1::1",
+      "[100:0:0:1::]:8080",
       "[2001:2::1]",
       "2001:0002:0000::1",
       "[2001:2:0:1::]",
@@ -860,11 +863,13 @@ describe("isNonPublicHostname", () => {
     expect(() => assertPublicHttpsBaseUrl("https://[100::1]/base-defi")).toThrow(
       /must not target a private host/,
     );
+    expect(() => assertPublicHttpsBaseUrl("https://[100:0:0:1::]/base-defi")).toThrow(
+      /must not target a private host/,
+    );
     expect(() => assertPublicHttpsBaseUrl("https://[2001:2::1]/base-defi")).toThrow(
       /must not target a private host/,
     );
-    // Neighbours of both prefixes stay public.
-    expect(isNonPublicHostname("[100:0:0:1::]")).toBe(true);
+    // Neighbours of the prefixes stay public.
     expect(isNonPublicHostname("[100:0:1::]")).toBe(false);
     expect(isNonPublicHostname("[2001:1::1]")).toBe(false);
     expect(isNonPublicHostname("[2001:2:1::]")).toBe(false);
