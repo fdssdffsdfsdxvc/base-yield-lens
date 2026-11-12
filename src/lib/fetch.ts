@@ -193,7 +193,7 @@ function canonicalHostname(hostname: string): string {
   }
 }
 
-/** True for localhost / loopback / 0.0.0.0\/8 / RFC1918 / CGNAT / multicast (IPv4 224/4, IPv6 ff00::/8) / reserved 240/4 / IANA special-purpose (192.0.0/24, TEST-NETs, 198.18/15) / IPv6 documentation prefixes (2001:db8::/32, 3fff::/20) / IPv6 discard-only (100::/64) / IPv6 dummy (100:0:0:1::/64) / IPv6 benchmarking (2001:2::/48) / IPv6 AMT (2001:3::/32) / link-local (fe80::/10) / IPv6 site-local (fec0::/10) / IPv6 ULA (fc00::/7) / .local/.localhost/.internal/home.arpa (RFC 8375). Accepts a bare hostname or a `host:port` authority (port ignored) and an RFC 4007 scoped IPv6 literal (zone id ignored, scope unchanged). */
+/** True for localhost / loopback / 0.0.0.0\/8 / RFC1918 / CGNAT / multicast (IPv4 224/4, IPv6 ff00::/8) / reserved 240/4 / IANA special-purpose (192.0.0/24, TEST-NETs, 198.18/15, 192.88.99/24, 192.52.193/24) / IPv6 documentation prefixes (2001:db8::/32, 3fff::/20) / IPv6 discard-only (100::/64) / IPv6 dummy (100:0:0:1::/64) / IPv6 benchmarking (2001:2::/48) / IPv6 AMT (2001:3::/32) / link-local (fe80::/10) / IPv6 site-local (fec0::/10) / IPv6 ULA (fc00::/7) / .local/.localhost/.internal/home.arpa (RFC 8375). Accepts a bare hostname or a `host:port` authority (port ignored) and an RFC 4007 scoped IPv6 literal (zone id ignored, scope unchanged). */
 export function isNonPublicHostname(hostname: string): boolean {
   // Node may keep brackets on IPv6 hostnames ("[fd12::1]").
   const h = canonicalHostname(hostname).replace(/\.+$/, "").replace(/^\[|\]$/g, "");
@@ -313,9 +313,10 @@ export function isNonPublicHostname(hostname: string): boolean {
   if (/^192\.0\.[02]\./.test(h)) return true;
   if (/^198\.(1[89])\./.test(h) || /^198\.51\.100\./.test(h)) return true;
   if (/^203\.0\.113\./.test(h)) return true;
-  // Deprecated 6to4 relay router anycast (RFC 7526) 192.88.99.0/24; IANA
-  // special-purpose and not globally reachable.
-  if (/^192\.88\.99\./.test(h)) return true;
+  // Deprecated 6to4 relay router anycast (RFC 7526) 192.88.99.0/24 and AMT
+  // relay anycast (RFC 7450) 192.52.193.0/24; IANA special-purpose and not
+  // globally reachable.
+  if (/^192\.88\.99\./.test(h) || /^192\.52\.193\./.test(h)) return true;
   return false;
 }
 
