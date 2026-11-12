@@ -11,3 +11,4 @@ coverage/
 .vite/
 *.tsbuildinfo
 pnpm-lock.yaml.bak
+.oc-commit-msg
