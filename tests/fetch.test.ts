@@ -511,6 +511,9 @@ describe("assertPublicHttpsBaseUrl", () => {
     expect(() =>
       assertPublicHttpsBaseUrl("https://u:p@mock.test/x"),
     ).toThrow(/must not embed credentials/);
+    expect(() =>
+      assertPublicHttpsBaseUrl("https://user@mock.test/x"),
+    ).toThrow(/must not embed credentials/);
   });
 
   it("rejects localhost and private-network hosts", () => {
