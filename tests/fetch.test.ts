@@ -1400,6 +1400,17 @@ describe("capUntrustedText", () => {
     expect(emojiCapped.endsWith("…")).toBe(true);
     expect(/[\ud800-\udbff]$/.test(emojiCapped.slice(0, -1))).toBe(false);
   });
+
+  it("sanitizes untrusted fetchedAt in formatSummary", () => {
+    const text = formatSummary({
+      chain: "base",
+      pools: [],
+      lending: [],
+      fetchedAt: "\u001b[31m2026\u001b[0m\nPools: 999",
+    });
+    expect(text.split("\n")[0]).toBe("Base yield lens @ [31m2026 [0m Pools: 999");
+    expect(text).not.toMatch(/[\u0000-\u0009\u000b-\u001f\u007f-\u009f\u2028\u2029]/);
+  });
 });
 
 describe("redactUrlCredentials", () => {
