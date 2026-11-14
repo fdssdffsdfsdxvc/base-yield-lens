@@ -60,7 +60,7 @@ function stripIpv6ZoneId(host: string): string {
  * and must not truncate a private host into a public-looking one.
  */
 function stripEmbeddedUserInfo(host: string): string {
-  const delimiters = ["/", "\\", "?", "#"];
+  const delimiters = ["/", "\\", "?", "#", "／", "＼", "？", "＃"];
   let firstDelim = host.length;
   for (const d of delimiters) {
     const i = host.indexOf(d);
