@@ -1411,6 +1411,21 @@ describe("capUntrustedText", () => {
     expect(text.split("\n")[0]).toBe("Base yield lens @ [31m2026 [0m Pools: 999");
     expect(text).not.toMatch(/[\u0000-\u0009\u000b-\u001f\u007f-\u009f\u2028\u2029]/);
   });
+
+  it("coerces non-string capUntrustedText inputs to empty string", () => {
+    expect(capUntrustedText(null)).toBe("");
+    expect(capUntrustedText(undefined)).toBe("");
+    expect(capUntrustedText(123)).toBe("");
+    expect(capUntrustedText({})).toBe("");
+
+    const text = formatSummary({
+      chain: "base",
+      pools: [],
+      lending: [],
+      fetchedAt: null as unknown as string,
+    });
+    expect(text.split("\n")[0]).toBe("Base yield lens @ ");
+  });
 });
 
 describe("redactUrlCredentials", () => {

@@ -462,7 +462,8 @@ function asNumber(value: unknown): number {
   return Number.NaN;
 }
 
-export function capUntrustedText(value: string): string {
+export function capUntrustedText(value: unknown): string {
+  if (typeof value !== "string") return "";
   const neutralized = value.replace(UNSAFE_LABEL_CHARS, " ").trim();
   if (neutralized.length <= MAX_LABEL_LENGTH) return neutralized;
   // Keep the surrogate-safe truncation used by fmtLabel so a capped timestamp
