@@ -624,22 +624,24 @@ export async function summarizeYields(opts?: {
 }
 
 export function formatSummary(s: YieldLensSummary): string {
-  const fetchedAt = capUntrustedText(s.fetchedAt);
-  const pools = Array.isArray(s.pools) ? s.pools : [];
-  const lending = Array.isArray(s.lending) ? s.lending : [];
+  const s0 =
+    s && typeof s === "object" ? (s as Partial<YieldLensSummary>) : {};
+  const fetchedAt = capUntrustedText(s0.fetchedAt);
+  const pools = Array.isArray(s0.pools) ? s0.pools : [];
+  const lending = Array.isArray(s0.lending) ? s0.lending : [];
   const lines = [
     `Base yield lens @ ${fetchedAt}`,
     `Pools: ${pools.length}`,
     ...pools.map((p) => {
-      const asOf = capUntrustedText(p.asOf);
+      const asOf = capUntrustedText(p?.asOf);
       const suffix = asOf ? ` @ ${asOf}` : "";
-      return `  - [${fmtLabel(p.protocol)}] ${fmtLabel(p.symbol)} TVL=$${fmtNum(p.tvlUsd, 0)} APR=${fmtNum(p.aprPct, 2)}%${suffix}`;
+      return `  - [${fmtLabel(p?.protocol)}] ${fmtLabel(p?.symbol)} TVL=$${fmtNum(asNumber(p?.tvlUsd), 0)} APR=${fmtNum(asNumber(p?.aprPct), 2)}%${suffix}`;
     }),
     `Lending: ${lending.length}`,
     ...lending.map((m) => {
-      const asOf = capUntrustedText(m.asOf);
+      const asOf = capUntrustedText(m?.asOf);
       const suffix = asOf ? ` @ ${asOf}` : "";
-      return `  - [${fmtLabel(m.protocol)}] ${fmtLabel(m.market)} supply=${fmtNum(m.supplyApyPct, 2)}% borrow=${fmtNum(m.borrowApyPct, 2)}%${suffix}`;
+      return `  - [${fmtLabel(m?.protocol)}] ${fmtLabel(m?.market)} supply=${fmtNum(asNumber(m?.supplyApyPct), 2)}% borrow=${fmtNum(asNumber(m?.borrowApyPct), 2)}%${suffix}`;
     }),
   ];
   return lines.join("\n");
