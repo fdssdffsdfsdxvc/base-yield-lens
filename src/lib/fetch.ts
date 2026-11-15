@@ -208,6 +208,7 @@ export function isNonPublicHostname(hostname: string): boolean {
   // are structural, and canonicalizing just the first hextet as an IPv4
   // shorthand ("2606" → 0.0.10.46) would wrongly reject public addresses.
   const rawHost = stripEmbeddedUserInfo(hostname);
+  if (h === "255.255.255.255") return true;
   if (!v6) {
     // Forbidden WHATWG host code points (controls, space, angles, brackets,
     // backslash, caret, pipe) plus quotes, backticks, braces, and other
