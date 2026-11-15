@@ -448,6 +448,26 @@ describe("formatSummary", () => {
       ].join("\n"),
     );
   });
+
+  it("tolerates null/undefined elements in pools/lending arrays at runtime", () => {
+    const text = formatSummary({
+      chain: "base",
+      pools: [null, undefined],
+      lending: [null],
+      fetchedAt: "2026-09-27T08:00:00.000Z",
+    } as unknown as import("../src/lib/fetch.js").YieldLensSummary);
+
+    expect(text).toBe(
+      [
+        "Base yield lens @ 2026-09-27T08:00:00.000Z",
+        "Pools: 2",
+        "  - [?] ? TVL=$? APR=?%",
+        "  - [?] ? TVL=$? APR=?%",
+        "Lending: 1",
+        "  - [?] ? supply=?% borrow=?%",
+      ].join("\n"),
+    );
+  });
 });
 
 describe("resolveBaseUrl", () => {
