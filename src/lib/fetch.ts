@@ -624,16 +624,18 @@ export async function summarizeYields(opts?: {
 
 export function formatSummary(s: YieldLensSummary): string {
   const fetchedAt = capUntrustedText(s.fetchedAt);
+  const pools = Array.isArray(s.pools) ? s.pools : [];
+  const lending = Array.isArray(s.lending) ? s.lending : [];
   const lines = [
     `Base yield lens @ ${fetchedAt}`,
-    `Pools: ${s.pools.length}`,
-    ...s.pools.map((p) => {
+    `Pools: ${pools.length}`,
+    ...pools.map((p) => {
       const asOf = capUntrustedText(p.asOf);
       const suffix = asOf ? ` @ ${asOf}` : "";
       return `  - [${fmtLabel(p.protocol)}] ${fmtLabel(p.symbol)} TVL=$${fmtNum(p.tvlUsd, 0)} APR=${fmtNum(p.aprPct, 2)}%${suffix}`;
     }),
-    `Lending: ${s.lending.length}`,
-    ...s.lending.map((m) => {
+    `Lending: ${lending.length}`,
+    ...lending.map((m) => {
       const asOf = capUntrustedText(m.asOf);
       const suffix = asOf ? ` @ ${asOf}` : "";
       return `  - [${fmtLabel(m.protocol)}] ${fmtLabel(m.market)} supply=${fmtNum(m.supplyApyPct, 2)}% borrow=${fmtNum(m.borrowApyPct, 2)}%${suffix}`;

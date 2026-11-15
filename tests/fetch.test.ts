@@ -433,6 +433,21 @@ describe("formatSummary", () => {
     expect(text).not.toContain("NaN");
     expect(text).not.toContain("Infinity");
   });
+
+  it("tolerates missing pools/lending arrays at runtime", () => {
+    const text = formatSummary({
+      chain: "base",
+      fetchedAt: "2026-09-27T08:00:00.000Z",
+    } as unknown as import("../src/lib/fetch.js").YieldLensSummary);
+
+    expect(text).toBe(
+      [
+        "Base yield lens @ 2026-09-27T08:00:00.000Z",
+        "Pools: 0",
+        "Lending: 0",
+      ].join("\n"),
+    );
+  });
 });
 
 describe("resolveBaseUrl", () => {
