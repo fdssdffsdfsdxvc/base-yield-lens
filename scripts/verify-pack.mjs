@@ -115,6 +115,14 @@ try {
     );
   }
 
+  const cli = execSync(
+    `tar -xOf ${JSON.stringify(tarball)} package/dist/cli.js`,
+    { encoding: "utf8" },
+  );
+  if (!cli.startsWith("#!/usr/bin/env node")) {
+    throw new Error("pack dist/cli.js must start with a node shebang");
+  }
+
   console.log(
     "verify-pack: ok —",
     required.join(", "),
