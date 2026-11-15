@@ -1427,6 +1427,36 @@ describe("capUntrustedText", () => {
     expect(text).not.toMatch(/[\u0000-\u0009\u000b-\u001f\u007f-\u009f\u2028\u2029]/);
   });
 
+  it("sanitizes untrusted pool/lending asOf timestamps in formatSummary", () => {
+    const text = formatSummary({
+      chain: "base",
+      pools: [
+        {
+          protocol: "aerodrome",
+          poolId: "0x1",
+          symbol: "WETH/USDC",
+          tvlUsd: 1,
+          aprPct: 1,
+          asOf: "\u001b[31mnow\u001b[0m\nPools: 999",
+        },
+      ],
+      lending: [
+        {
+          protocol: "aave-v3",
+          market: "USDC",
+          supplyApyPct: 1,
+          borrowApyPct: 2,
+          asOf: "t\u2028Lending: 999",
+        },
+      ],
+      fetchedAt: "2026-09-27T08:00:00.000Z",
+    });
+    expect(text).toContain("@ [31mnow [0m Pools: 999");
+    expect(text).toContain("@ t Lending: 999");
+    expect(text.split("\n")).toHaveLength(5);
+    expect(text).not.toMatch(/[\u0000-\u0009\u000b-\u001f\u007f-\u009f\u2028\u2029]/);
+  });
+
   it("coerces non-string capUntrustedText inputs to empty string", () => {
     expect(capUntrustedText(null)).toBe("");
     expect(capUntrustedText(undefined)).toBe("");
