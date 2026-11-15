@@ -468,6 +468,44 @@ describe("formatSummary", () => {
       ].join("\n"),
     );
   });
+
+  it("omits asOf suffix when runtime timestamps are missing or non-string", () => {
+    const text = formatSummary({
+      chain: "base",
+      pools: [
+        {
+          protocol: "aerodrome",
+          poolId: "0x1",
+          symbol: "WETH/USDC",
+          tvlUsd: 1,
+          aprPct: 1,
+          asOf: null,
+        },
+      ],
+      lending: [
+        {
+          protocol: "aave-v3",
+          market: "USDC",
+          supplyApyPct: 1,
+          borrowApyPct: 2,
+          asOf: 123,
+        },
+      ],
+      fetchedAt: "2026-09-27T08:00:00.000Z",
+    } as unknown as import("../src/lib/fetch.js").YieldLensSummary);
+
+    expect(text).toBe(
+      [
+        "Base yield lens @ 2026-09-27T08:00:00.000Z",
+        "Pools: 1",
+        "  - [aerodrome] WETH/USDC TVL=$1 APR=1.00%",
+        "Lending: 1",
+        "  - [aave-v3] USDC supply=1.00% borrow=2.00%",
+      ].join("\n"),
+    );
+    expect(text).not.toContain("null");
+    expect(text).not.toContain("123");
+  });
 });
 
 describe("resolveBaseUrl", () => {
