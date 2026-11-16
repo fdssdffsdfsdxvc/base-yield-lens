@@ -585,6 +585,24 @@ describe("resolveBaseUrl", () => {
       "https://api.example.invalid/base-defi/lending",
     ]);
   });
+
+  it("joins paths without double slashes when custom base has trailing slashes", async () => {
+    const urls: string[] = [];
+    const fetchImpl = vi.fn(async (input: RequestInfo | URL) => {
+      urls.push(String(input));
+      return new Response("[]", {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      });
+    }) as unknown as typeof fetch;
+
+    await summarizeYields({ baseUrl: "https://mock.test/base-defi///", fetchImpl });
+
+    expect(urls).toEqual([
+      "https://mock.test/base-defi/pools",
+      "https://mock.test/base-defi/lending",
+    ]);
+  });
 });
 
 describe("assertPublicHttpsBaseUrl", () => {
