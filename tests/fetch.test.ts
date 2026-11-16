@@ -767,6 +767,19 @@ describe("assertPublicHttpsBaseUrl", () => {
     ).toThrow(/must not include query or hash/);
   });
 
+  it("rejects raw control characters that the URL parser would strip or reinterpret", () => {
+    for (const u of [
+      "https://127.0.0.1\nevil/base-defi",
+      "https://127.0.0.1\tevil/base-defi",
+      "https://mock.test/base\u001b[31m-defi",
+      "https://mock.test/base\u2028defi",
+    ]) {
+      expect(() => assertPublicHttpsBaseUrl(u), u).toThrow(/must not include control characters/);
+      expect(() => resolveBaseUrl(u), u).toThrow(/must not include control characters/);
+    }
+    expect(() => resolveBaseUrl("https://mock.test/base-defi")).not.toThrow();
+  });
+
   it("rejects a bare trailing ? or # (empty query/hash still breaks path join)", () => {
     // new URL(...).search/hash are "" here, but `${base}/pools` would become
     // "https://mock.test/base-defi?/pools" (query) or "#/pools" (dropped fragment).
