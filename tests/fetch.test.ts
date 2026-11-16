@@ -451,6 +451,20 @@ describe("formatSummary", () => {
     );
   });
 
+  it("renders an empty summary when the summary object itself is missing", () => {
+    const empty = ["Base yield lens @ ", "Pools: 0", "Lending: 0"].join("\n");
+    expect(
+      formatSummary(
+        null as unknown as import("../src/lib/fetch.js").YieldLensSummary,
+      ),
+    ).toBe(empty);
+    expect(
+      formatSummary(
+        undefined as unknown as import("../src/lib/fetch.js").YieldLensSummary,
+      ),
+    ).toBe(empty);
+  });
+
   it("tolerates null/undefined elements in pools/lending arrays at runtime", () => {
     const text = formatSummary({
       chain: "base",
