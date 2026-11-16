@@ -485,6 +485,35 @@ describe("formatSummary", () => {
     );
   });
 
+  it("caps rendered rows at MAX_SUMMARY_ROWS for caller-built summaries", () => {
+    const pool = {
+      protocol: "aerodrome",
+      poolId: "0x1",
+      symbol: "WETH/USDC",
+      tvlUsd: 1,
+      aprPct: 1,
+      asOf: "",
+    };
+    const market = {
+      protocol: "aave-v3",
+      market: "USDC",
+      supplyApyPct: 1,
+      borrowApyPct: 2,
+      asOf: "",
+    };
+    const text = formatSummary({
+      chain: "base",
+      pools: Array.from({ length: MAX_SUMMARY_ROWS + 5 }, () => pool),
+      lending: Array.from({ length: MAX_SUMMARY_ROWS + 5 }, () => market),
+      fetchedAt: "2026-09-27T08:00:00.000Z",
+    });
+
+    const lines = text.split("\n");
+    expect(lines).toHaveLength(2 + MAX_SUMMARY_ROWS + 1 + MAX_SUMMARY_ROWS);
+    expect(lines[1]).toBe(`Pools: ${MAX_SUMMARY_ROWS}`);
+    expect(lines[2 + MAX_SUMMARY_ROWS]).toBe(`Lending: ${MAX_SUMMARY_ROWS}`);
+  });
+
   it("omits asOf suffix when runtime timestamps are missing or non-string", () => {
     const text = formatSummary({
       chain: "base",

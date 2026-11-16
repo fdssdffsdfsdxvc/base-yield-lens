@@ -627,8 +627,11 @@ export function formatSummary(s: YieldLensSummary): string {
   const s0 =
     s && typeof s === "object" ? (s as Partial<YieldLensSummary>) : {};
   const fetchedAt = capUntrustedText(s0.fetchedAt);
-  const pools = Array.isArray(s0.pools) ? s0.pools : [];
-  const lending = Array.isArray(s0.lending) ? s0.lending : [];
+  // Cap rendered rows as well as fetched rows: normalizePools/normalizeLending
+  // cap at MAX_SUMMARY_ROWS, but formatSummary is exported and may be called
+  // with a caller-built summary — an unbounded array would flood stdout/logs.
+  const pools = (Array.isArray(s0.pools) ? s0.pools : []).slice(0, MAX_SUMMARY_ROWS);
+  const lending = (Array.isArray(s0.lending) ? s0.lending : []).slice(0, MAX_SUMMARY_ROWS);
   const lines = [
     `Base yield lens @ ${fetchedAt}`,
     `Pools: ${pools.length}`,

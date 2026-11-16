@@ -85,7 +85,8 @@ like labels). Labels are also hard-capped at 128 characters (`MAX_LABEL_LENGTH`,
 never mid-surrogate-pair so emoji/astral labels do not become U+FFFD mojibake) so a huge upstream
 string cannot flood stdout/logs, and each summary section is capped at `MAX_SUMMARY_ROWS` (1,000)
 rows so thousands of tiny records packed into a single response cannot produce tens of thousands of
-summary lines. Finite decimal numeric strings, including exponent notation (e.g. `1e6`, `-.5`), are
+summary lines (the cap is applied both when normalizing responses and when `formatSummary` renders,
+so a caller-built summary object is capped too). Finite decimal numeric strings, including exponent notation (e.g. `1e6`, `-.5`), are
 accepted for metrics (hex/octal/binary strings such as `0x…` raw on-chain quantities are not
 reinterpreted as decimal); non-finite (or non-numeric) fields render as `?` instead of `NaN`.
 
