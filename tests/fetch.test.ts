@@ -942,6 +942,31 @@ describe("isNonPublicHostname", () => {
     expect(isNonPublicHostname("[::ffff:c034:c101]")).toBe(true); // ::ffff:192.52.193.1
   });
 
+  it("flags AS112 nameserver-redirection anycast ranges (IANA special-purpose)", () => {
+    // RFC 7534/7535 AS112 v4 + v6 sinks are IANA special-purpose, not globally
+    // reachable; IPv4-mapped IPv6 forms must be caught by the same range check.
+    for (const ip of ["192.31.196.5", "192.175.48.1"]) {
+      expect(isNonPublicHostname(ip), ip).toBe(true);
+      expect(() => assertPublicHttpsBaseUrl(`https://${ip}/base-defi`)).toThrow(
+        /must not target a private host/,
+      );
+    }
+    expect(isNonPublicHostname("[::ffff:c01f:c405]")).toBe(true); // ::ffff:192.31.196.5
+    // AS112-v6 2001:4:112::/48 (RFC 7534), including a port and the expanded form.
+    for (const host of ["2001:4:112::1", "[2001:4:112::53]:8080", "[2001:4:112:0:0:0:0:1]"]) {
+      expect(isNonPublicHostname(host), host).toBe(true);
+      // An IPv6 literal in a URL must be bracketed.
+      const authority = host.startsWith("[") ? host : `[${host}]`;
+      expect(() => assertPublicHttpsBaseUrl(`https://${authority}/base-defi`)).toThrow(
+        /must not target a private host/,
+      );
+    }
+    // Neighbouring ranges stay public (only the /24s and /48 are special-purpose).
+    expect(isNonPublicHostname("192.31.195.5")).toBe(false);
+    expect(isNonPublicHostname("192.175.49.1")).toBe(false);
+    expect(isNonPublicHostname("[2001:4:113::1]")).toBe(false);
+  });
+
   it("flags private IPv4-mapped IPv6 (::ffff:) hosts", () => {
     expect(ipv4MappedAddress("::ffff:127.0.0.1")).toBe("127.0.0.1");
     expect(ipv4MappedAddress("[::ffff:7f00:1]")).toBe("127.0.0.1");
