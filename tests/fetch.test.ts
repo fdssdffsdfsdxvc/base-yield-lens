@@ -611,6 +611,27 @@ describe("resolveBaseUrl", () => {
     );
   });
 
+  it("strips trailing backslashes, which WHATWG treats as slashes", async () => {
+    expect(resolveBaseUrl("https://mock.test/base-defi\\")).toBe(
+      "https://mock.test/base-defi",
+    );
+    expect(resolveBaseUrl("https://mock.test/base-defi\\\\")).toBe(
+      "https://mock.test/base-defi",
+    );
+    expect(resolveBaseUrl("\\")).toBe("https://api.example.invalid/base-defi");
+
+    const urls: string[] = [];
+    const fetchImpl = vi.fn(async (input: RequestInfo | URL) => {
+      urls.push(String(input));
+      return new Response("[]", { status: 200 });
+    }) as unknown as typeof fetch;
+    await summarizeYields({ baseUrl: "https://mock.test/base-defi\\", fetchImpl });
+    expect(urls).toEqual([
+      "https://mock.test/base-defi/pools",
+      "https://mock.test/base-defi/lending",
+    ]);
+  });
+
   it("rejects non-https, credentialed, hostless, or invalid base URLs", () => {
     expect(() => resolveBaseUrl("http://mock.test/base-defi")).toThrow(
       /must be https/,
