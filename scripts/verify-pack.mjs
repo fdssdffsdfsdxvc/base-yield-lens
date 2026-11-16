@@ -3,7 +3,7 @@
  * Ensures npm pack ships the published bin entrypoints under dist/
  * (guards against regressing the package "files" field).
  */
-import { execSync } from "node:child_process";
+import { execFileSync } from "node:child_process";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -21,7 +21,8 @@ const forbiddenPrefixes = ["src/", "tests/", "scripts/"];
 
 const dir = mkdtempSync(join(tmpdir(), "base-yield-lens-pack-"));
 try {
-  const out = execSync(`npm pack --pack-destination ${JSON.stringify(dir)}`, {
+  const npmCmd = process.platform === "win32" ? "npm.cmd" : "npm";
+  const out = execFileSync(npmCmd, ["pack", "--pack-destination", dir], {
     encoding: "utf8",
   });
   const line = out
@@ -34,7 +35,7 @@ try {
     throw new Error(`unexpected npm pack output: ${out}`);
   }
   const tarball = join(dir, line);
-  const listing = execSync(`tar -tzf ${JSON.stringify(tarball)}`, {
+  const listing = execFileSync("tar", ["-tzf", tarball], {
     encoding: "utf8",
   })
     .split("\n")
@@ -59,8 +60,9 @@ try {
       throw new Error(`pack unexpectedly includes ${entry}`);
     }
   }
-  const extracted = execSync(
-    `tar -xOf ${JSON.stringify(tarball)} package/package.json`,
+  const extracted = execFileSync(
+    "tar",
+    ["-xOf", tarball, "package/package.json"],
     { encoding: "utf8" },
   );
   const pkg = JSON.parse(extracted);
@@ -115,8 +117,9 @@ try {
     );
   }
 
-  const cli = execSync(
-    `tar -xOf ${JSON.stringify(tarball)} package/dist/cli.js`,
+  const cli = execFileSync(
+    "tar",
+    ["-xOf", tarball, "package/dist/cli.js"],
     { encoding: "utf8" },
   );
   if (!cli.startsWith("#!/usr/bin/env node")) {
