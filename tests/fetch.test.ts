@@ -203,6 +203,42 @@ describe("summarizeYields", () => {
     expect(() => formatSummary(summary)).not.toThrow();
   });
 
+  it("issues pools and lending requests concurrently", async () => {
+    const started: string[] = [];
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const fetchImpl = vi.fn(async (input: RequestInfo | URL) => {
+      started.push(String(input));
+      await gate;
+      return new Response("[]", {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      });
+    }) as unknown as typeof fetch;
+
+    const pending = summarizeYields({
+      baseUrl: "https://mock.test/base-defi",
+      fetchImpl,
+    });
+    // Flush microtasks/macrotask queue: with sequential awaits the /lending
+    // request would not start until /pools resolves, so both URLs must be
+    // recorded here while the gate is still closed.
+    await new Promise((resolve) => setImmediate(resolve));
+    expect(started).toHaveLength(2);
+    expect(started).toEqual(
+      expect.arrayContaining([
+        "https://mock.test/base-defi/pools",
+        "https://mock.test/base-defi/lending",
+      ]),
+    );
+    release();
+    const summary = await pending;
+    expect(summary.pools).toEqual([]);
+    expect(summary.lending).toEqual([]);
+  });
+
   it("returns empty arrays when JSON body is malformed", async () => {
     const fetchImpl = vi.fn(
       async () =>

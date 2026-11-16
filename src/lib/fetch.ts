@@ -608,12 +608,17 @@ export async function summarizeYields(opts?: {
   // TODOs point at real integrations; stubs keep the CLI useful offline.
   // Non-array / malformed JSON / null elements must not crash formatSummary later.
   // A hung endpoint times out (AbortSignal) and falls back to [] like other failures.
-  const pools = await fetchJson<unknown>(`${baseUrl}/pools`, fetchImpl, timeoutMs)
-    .then((v) => normalizePools(v))
-    .catch(() => [] as PoolSnapshot[]);
-  const lending = await fetchJson<unknown>(`${baseUrl}/lending`, fetchImpl, timeoutMs)
-    .then((v) => normalizeLending(v))
-    .catch(() => [] as LendingSnapshot[]);
+  // Both requests are independent: issue them concurrently so a slow endpoint
+  // does not add its latency on top of the other (worst case drops from 2x to
+  // 1x the per-request timeout).
+  const [pools, lending] = await Promise.all([
+    fetchJson<unknown>(`${baseUrl}/pools`, fetchImpl, timeoutMs)
+      .then((v) => normalizePools(v))
+      .catch(() => [] as PoolSnapshot[]),
+    fetchJson<unknown>(`${baseUrl}/lending`, fetchImpl, timeoutMs)
+      .then((v) => normalizeLending(v))
+      .catch(() => [] as LendingSnapshot[]),
+  ]);
 
   return {
     chain: "base",
