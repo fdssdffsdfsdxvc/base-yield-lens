@@ -755,6 +755,28 @@ describe("assertPublicHttpsBaseUrl", () => {
     ).toThrow(/must not target a private host/);
   });
 
+  it("rejects IDNA-homoglyph spellings of private hosts", () => {
+    // The URL parser NFKC-normalizes fullwidth digits/letters and Unicode dot
+    // variants, so these hostnames resolve to loopback and must not slip past
+    // the private-host check just because they are written with lookalikes.
+    for (const host of [
+      "１２７.０.０.１", // fullwidth digits → 127.0.0.1
+      "127。0。0。1", // ideographic full stop → 127.0.0.1
+      "１２７．０．０．１", // fullwidth digits + fullwidth full stop
+      "ｌｏｃａｌｈｏｓｔ", // fullwidth letters → localhost
+    ]) {
+      expect(isNonPublicHostname(host), host).toBe(true);
+      expect(() => assertPublicHttpsBaseUrl(`https://${host}/base-defi`), host).toThrow(
+        /must not target a private host/,
+      );
+      expect(() => resolveBaseUrl(`https://${host}/base-defi`), host).toThrow(
+        /must not target a private host/,
+      );
+    }
+    // A public host written with fullwidth letters stays allowed.
+    expect(isNonPublicHostname("ｅｘａｍｐｌｅ.test")).toBe(false);
+  });
+
   it("rejects query or hash on the API root (breaks /pools path join)", () => {
     expect(() =>
       assertPublicHttpsBaseUrl("https://mock.test/base-defi?x=1"),
