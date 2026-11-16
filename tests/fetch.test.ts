@@ -15,6 +15,8 @@ import {
   formatSummary,
   ipv4MappedAddress,
   isNonPublicHostname,
+  normalizeLending,
+  normalizePools,
   redactUrlCredentials,
   resolveBaseUrl,
   summarizeYields,
@@ -1175,6 +1177,13 @@ describe("fmtLabel", () => {
 });
 
 describe("normalizePools / normalizeLending", () => {
+  it("returns empty arrays for non-array inputs", () => {
+    for (const value of [undefined, null, {}, "x", 1, true]) {
+      expect(normalizePools(value)).toEqual([]);
+      expect(normalizeLending(value)).toEqual([]);
+    }
+  });
+
   it("drops null/non-object elements so formatSummary does not crash", async () => {
     const fetchImpl = vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input);
