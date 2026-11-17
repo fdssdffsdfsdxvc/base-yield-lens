@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "description": "Read-only CLI/library to fetch and summarize Base DeFi pool/lending snapshots",
   "type": "module",
+  "sideEffects": false,
   "bin": {
     "base-yield-lens": "./dist/cli.js"
   },
