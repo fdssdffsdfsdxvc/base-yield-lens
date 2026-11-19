@@ -316,6 +316,33 @@ describe("fetchJson", () => {
     ).rejects.toThrow("Request to https://mock.test/refused failed (ECONNREFUSED)");
   });
 
+  it("masks credentials when the body stream fails mid-read", async () => {
+    // A stream error surfacing while the body is read (e.g. undici "terminated")
+    // must not echo a URL-embedded secret either.
+    const stream = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(new TextEncoder().encode("{"));
+        controller.error(
+          new TypeError(
+            "terminated reading https://user:hunter2@mock.test/partial",
+          ),
+        );
+      },
+    });
+    const fetchImpl = vi.fn(
+      async () => new Response(stream, { status: 200 }),
+    ) as unknown as typeof fetch;
+
+    let message = "";
+    try {
+      await fetchJson("https://user:hunter2@mock.test/partial", fetchImpl);
+    } catch (err) {
+      message = (err as Error).message;
+    }
+    expect(message).toBe("Request to https://***@mock.test/partial failed");
+    expect(message).not.toContain("hunter2");
+  });
+
   it("returns parsed JSON for OK responses", async () => {
     const fetchImpl = vi.fn(
       async () =>

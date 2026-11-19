@@ -539,6 +539,25 @@ export const DEFAULT_FETCH_TIMEOUT_MS = 10_000;
  */
 export const MAX_RESPONSE_BYTES = 2_000_000;
 
+/**
+ * Build one plain masked line for a failed request. undici embeds the raw
+ * input URL (with any userinfo) in some error messages, so the URL must go
+ * through redactUrlCredentials; a Node system errno (ECONNREFUSED, ...)
+ * carries no secrets and is kept for debuggability.
+ */
+function requestFailedError(url: string, err: unknown): Error {
+  const cause = (err as { cause?: unknown } | null)?.cause;
+  const code =
+    typeof (cause as { code?: unknown } | null)?.code === "string"
+      ? (cause as { code: string }).code
+      : typeof (err as { code?: unknown } | null)?.code === "string"
+        ? (err as { code: string }).code
+        : "";
+  return new Error(
+    `Request to ${redactUrlCredentials(url)} failed${code ? ` (${code})` : ""}`,
+  );
+}
+
 export async function fetchJson<T>(
   url: string,
   fetchImpl: typeof fetch = fetch,
@@ -571,18 +590,7 @@ export async function fetchJson<T>(
     // input embedded — echoing any userinfo — while connection failures throw
     // TypeError("fetch failed") with an errno `code` on the cause. Do not let
     // the raw message escape: emit one plain line with the credentials masked.
-    // A Node system errno (ECONNREFUSED, ENOTFOUND, ...) carries no secrets and
-    // is kept for debuggability.
-    const cause = (err as { cause?: unknown } | null)?.cause;
-    const code =
-      typeof (cause as { code?: unknown } | null)?.code === "string"
-        ? (cause as { code: string }).code
-        : typeof (err as { code?: unknown } | null)?.code === "string"
-          ? (err as { code: string }).code
-          : "";
-    throw new Error(
-      `Request to ${redactUrlCredentials(url)} failed${code ? ` (${code})` : ""}`,
-    );
+    throw requestFailedError(url, err);
   }
   if (!res.ok) {
     // The body was never consumed; cancel it so it also releases the
@@ -605,6 +613,9 @@ export async function fetchJson<T>(
   if (reader) {
     const decoder = new TextDecoder();
     let bytes = 0;
+    // Sentinel so the catch below can tell our own size-cap error apart from
+    // failures thrown by the underlying stream.
+    const tooLargeError = new Error(tooLarge);
     try {
       for (;;) {
         const { done, value } = await reader.read();
@@ -613,11 +624,17 @@ export async function fetchJson<T>(
         bytes += value.byteLength;
         if (bytes > MAX_RESPONSE_BYTES) {
           await reader.cancel().catch(() => {});
-          throw new Error(tooLarge);
+          throw tooLargeError;
         }
         text += decoder.decode(value, { stream: true });
       }
       text += decoder.decode();
+    } catch (err) {
+      if (err === tooLargeError) throw err;
+      // Body-stream failures (e.g. undici "terminated", or a custom fetchImpl's
+      // stream error) may embed the raw URL with userinfo — mask them the same
+      // way fetch-level failures are masked.
+      throw requestFailedError(url, err);
     } finally {
       reader.releaseLock();
     }
