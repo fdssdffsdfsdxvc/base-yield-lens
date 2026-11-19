@@ -284,6 +284,38 @@ describe("fetchJson", () => {
     expect(message).not.toContain("hunter2");
   });
 
+  it("masks credentials when fetch itself rejects (e.g. unparseable-URL echo)", async () => {
+    // undici throws TypeError("Failed to parse URL from <input>") with the raw
+    // input embedded; the userinfo must not reach stderr/logs.
+    const fetchImpl = vi.fn(async () => {
+      throw new TypeError(
+        "Failed to parse URL from https://user:hunter2@mock.test/bad url",
+      );
+    }) as unknown as typeof fetch;
+
+    let message = "";
+    try {
+      await fetchJson("https://user:hunter2@mock.test/bad url", fetchImpl);
+    } catch (err) {
+      message = (err as Error).message;
+    }
+    expect(message).toBe("Request to https://***@mock.test/bad url failed");
+    expect(message).not.toContain("hunter2");
+  });
+
+  it("keeps a Node system errno code for debuggability", async () => {
+    const cause = Object.assign(new Error("connect ECONNREFUSED 127.0.0.1:443"), {
+      code: "ECONNREFUSED",
+    });
+    const fetchImpl = vi.fn(async () => {
+      throw new TypeError("fetch failed", { cause });
+    }) as unknown as typeof fetch;
+
+    await expect(
+      fetchJson("https://mock.test/refused", fetchImpl),
+    ).rejects.toThrow("Request to https://mock.test/refused failed (ECONNREFUSED)");
+  });
+
   it("returns parsed JSON for OK responses", async () => {
     const fetchImpl = vi.fn(
       async () =>

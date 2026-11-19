@@ -557,13 +557,33 @@ export async function fetchJson<T>(
     timeoutMs <= MAX_TIMEOUT_MS
       ? timeoutMs
       : DEFAULT_FETCH_TIMEOUT_MS;
-  const res = await fetchImpl(url, {
-    headers: { accept: "application/json" },
-    signal: AbortSignal.timeout(ms),
-    // Following redirects would bypass assertPublicHttpsBaseUrl (a public https
-    // root could 30x to http:// or a private/metadata host). Treat as failure.
-    redirect: "error",
-  });
+  let res: Response;
+  try {
+    res = await fetchImpl(url, {
+      headers: { accept: "application/json" },
+      signal: AbortSignal.timeout(ms),
+      // Following redirects would bypass assertPublicHttpsBaseUrl (a public https
+      // root could 30x to http:// or a private/metadata host). Treat as failure.
+      redirect: "error",
+    });
+  } catch (err) {
+    // undici throws TypeError("Failed to parse URL from <input>") with the raw
+    // input embedded — echoing any userinfo — while connection failures throw
+    // TypeError("fetch failed") with an errno `code` on the cause. Do not let
+    // the raw message escape: emit one plain line with the credentials masked.
+    // A Node system errno (ECONNREFUSED, ENOTFOUND, ...) carries no secrets and
+    // is kept for debuggability.
+    const cause = (err as { cause?: unknown } | null)?.cause;
+    const code =
+      typeof (cause as { code?: unknown } | null)?.code === "string"
+        ? (cause as { code: string }).code
+        : typeof (err as { code?: unknown } | null)?.code === "string"
+          ? (err as { code: string }).code
+          : "";
+    throw new Error(
+      `Request to ${redactUrlCredentials(url)} failed${code ? ` (${code})` : ""}`,
+    );
+  }
   if (!res.ok) {
     // The body was never consumed; cancel it so it also releases the
     // connection instead of lingering on the (dead) status-promise payload.

@@ -62,7 +62,10 @@ with a clear error. Error messages mask any embedded `user:pass@` as `***@` (eve
 print the raw, unparseable URL; for `/` — the one delimiter that really does bound the authority —
 the mask falls back to a broader pass scoped to unparseable URLs only, so a path `@` in a parseable
 URL is never over-masked) so secrets are not echoed to stderr/logs (also applied to `fetchJson` HTTP
-error messages, since it is exported). Since these errors echo the untrusted argv flag or
+error messages, since it is exported, and to fetch-level failures such as undici's
+`Failed to parse URL from <input>`, which embeds the raw input and is reported as a generic masked
+`Request to <url> failed` line, keeping only a secret-free Node errno code like `ECONNREFUSED` for
+debugging). Since these errors echo the untrusted argv flag or
 `YIELD_LENS_BASE_URL` value, all CLI stderr output also replaces control characters (ANSI escapes,
 C0/CR/LF/BEL, DEL, C1, Unicode line/paragraph separators, bidi overrides) with spaces, the same
 neutralization used on API labels, so an attacker-crafted argv or env value cannot rewrite terminal
