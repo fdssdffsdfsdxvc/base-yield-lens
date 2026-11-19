@@ -301,6 +301,19 @@ describe("fetchJson", () => {
     ).resolves.toEqual({ ok: true, n: 42 });
   });
 
+  it("throws a clear error when an OK response has no body (e.g. 204)", async () => {
+    const fetchImpl = vi.fn(
+      async () =>
+        new Response(null, {
+          status: 204,
+        }),
+    ) as unknown as typeof fetch;
+
+    await expect(
+      fetchJson("https://mock.test/empty", fetchImpl),
+    ).rejects.toThrow("Invalid JSON in response from https://mock.test/empty");
+  });
+
   it("throws a clear, credential-masked error for malformed JSON", async () => {
     const fetchImpl = vi.fn(
       async () =>
