@@ -20,7 +20,7 @@ pnpm cli
 pnpm cli -- --help
 ```
 
-CI (GitHub Actions, Node 22 LTS — Node 20 reached end-of-life in April 2026; workflow actions pinned to their Node 24-based majors `actions/checkout@v5`, `actions/setup-node@v5`, `pnpm/action-setup@v5`, each by its immutable full commit SHA so a moved/swapped tag can never introduce arbitrary code into CI; least-privilege `permissions: contents: read` on the workflow) runs `pnpm install --frozen-lockfile`, `pnpm typecheck`, `pnpm build`, `pnpm test`, and `pnpm verify-pack` on push/PR to `main` (bump the SHA when upgrading an action).
+CI (GitHub Actions, Node 22 LTS — Node 20 reached end-of-life in April 2026; workflow actions pinned to their Node 24-based majors `actions/checkout@v5`, `actions/setup-node@v5`, `pnpm/action-setup@v5`, each by its immutable full commit SHA so a moved/swapped tag can never introduce arbitrary code into CI; least-privilege `permissions: contents: read` on the workflow, and `actions/checkout` runs with `persist-credentials: false` so no checkout token lingers in `.git/config` for later steps to read) runs `pnpm install --frozen-lockfile`, `pnpm typecheck`, `pnpm build`, `pnpm test`, and `pnpm verify-pack` on push/PR to `main` (bump the SHA when upgrading an action).
 
 Dev tooling (vitest 4 / vite 8) needs Node `^20.19` or `>=22.12`; the built CLI/library itself still runs on Node `>=18` (`engines`). Run `pnpm audit` after dependency changes — vitest was bumped from 2.x to `^4.1.12` because 2.x pulled in advisories for vitest, vite, esbuild, tinypool and source-map-js, and patched again from `^4.1.11` to `^4.1.12` for the `@vitest/mocker` advisories (GHSA-qxg6-89mg-rqv8, GHSA-xp26-3454-mjgp).
 

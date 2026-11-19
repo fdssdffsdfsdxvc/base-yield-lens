@@ -22,7 +22,11 @@ jobs:
     steps:
       # Pinned to the immutable ref of the tagged version, so a moved/swapped
       # tag cannot introduce arbitrary code into CI.
+      # persist-credentials: false — no later step uses git, so the checkout
+      # token must not linger in .git/config for third-party code to read.
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
       - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v5
         with:
           version: 9
