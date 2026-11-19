@@ -301,6 +301,27 @@ describe("fetchJson", () => {
     ).resolves.toEqual({ ok: true, n: 42 });
   });
 
+  it("throws a clear, credential-masked error for malformed JSON", async () => {
+    const fetchImpl = vi.fn(
+      async () =>
+        new Response('{"ok": hunter2-secret-stuff', {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        }),
+    ) as unknown as typeof fetch;
+
+    let message = "";
+    try {
+      await fetchJson("https://user:hunter2@mock.test/bad", fetchImpl);
+    } catch (err) {
+      message = (err as Error).message;
+    }
+    expect(message).toBe(
+      "Invalid JSON in response from https://***@mock.test/bad",
+    );
+    expect(message).not.toContain("hunter2");
+  });
+
   it("rejects a body whose declared content-length exceeds the cap", async () => {
     const fetchImpl = vi.fn(
       async () =>

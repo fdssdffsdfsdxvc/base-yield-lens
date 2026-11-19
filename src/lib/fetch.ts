@@ -605,7 +605,14 @@ export async function fetchJson<T>(
   if (text.length > MAX_RESPONSE_BYTES) {
     throw new Error(tooLarge);
   }
-  return JSON.parse(text) as T;
+  try {
+    return JSON.parse(text) as T;
+  } catch {
+    // Do not rethrow the raw SyntaxError: it carries no URL context and would
+    // look different from every other fetchJson failure. The body itself is
+    // not echoed — it is untrusted and may be huge.
+    throw new Error(`Invalid JSON in response from ${redactUrlCredentials(url)}`);
+  }
 }
 
 /** Summarize placeholder Aerodrome-style pools + Aave-style markets. */
