@@ -1082,6 +1082,25 @@ describe("isNonPublicHostname", () => {
     expect(isNonPublicHostname("[2001:4:113::1]")).toBe(false);
   });
 
+  it("flags 2620:4f:8000::/48 (Direct Delegation AS112 Service)", () => {
+    // RFC 7534 assigns this second AS112 IPv6 anycast prefix alongside
+    // 2001:4:112::/48; it is IANA special-purpose, not a real API destination.
+    for (const host of [
+      "2620:4f:8000::1",
+      "[2620:4f:8000::53]:8080",
+      "[2620:4f:8000:0:0:0:0:1]",
+    ]) {
+      expect(isNonPublicHostname(host), host).toBe(true);
+      const authority = host.startsWith("[") ? host : `[${host}]`;
+      expect(() => assertPublicHttpsBaseUrl(`https://${authority}/base-defi`)).toThrow(
+        /must not target a private host/,
+      );
+    }
+    // Neighbouring /48s stay public.
+    expect(isNonPublicHostname("[2620:4f:8001::1]")).toBe(false);
+    expect(isNonPublicHostname("[2620:4f:7fff::1]")).toBe(false);
+  });
+
   it("flags private IPv4-mapped IPv6 (::ffff:) hosts", () => {
     expect(ipv4MappedAddress("::ffff:127.0.0.1")).toBe("127.0.0.1");
     expect(ipv4MappedAddress("[::ffff:7f00:1]")).toBe("127.0.0.1");

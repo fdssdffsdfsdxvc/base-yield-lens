@@ -40,7 +40,8 @@ localhost / `.localhost` / `.internal` / `home.arpa` (RFC 8375 special-use domai
 broadcast `255.255.255.255`, IPv6 `ff00::/8`) / IANA special-purpose (192.0.0/24, TEST-NETs,
 benchmarking 198.18/15, deprecated 6to4 relay anycast 192.88.99/24, AMT relay anycast 192.52.193/24,
 AS112 nameserver-redirection anycast 192.31.196/24 and 192.175.48/24, IPv6 AS112-v6 2001:4:112::/48,
-IPv6 documentation prefixes 2001:db8::/32 and 3fff::/20, IPv6 discard-only 100::/64, IPv6 dummy
+IPv6 Direct Delegation AS112 2620:4f:8000::/48, IPv6 documentation prefixes 2001:db8::/32 and
+3fff::/20, IPv6 discard-only 100::/64, IPv6 dummy
 100:0:0:1::/64, IPv6 benchmarking 2001:2::/48, IPv6 ORCHID prefixes 2001:10::/28 and 2001:20::/28,
 IPv6 Drone Remote ID Protocol Entity Tags 2001:30::/28, IPv6 Segment Routing SIDs 5f00::/16, IPv6
 Automatic Multicast Tunneling 2001:3::/32) / CGNAT (100.64/10) / bracketed IPv6 ULA (`fc00::/7`) /
