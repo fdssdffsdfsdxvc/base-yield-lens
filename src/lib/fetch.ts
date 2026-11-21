@@ -159,9 +159,12 @@ export function embeddedIpv4Address(hostname: string): string | null {
  * Unparseable input falls back to the lowercased original.
  */
 function canonicalHostname(hostname: string): string {
-  // Drop any embedded userinfo ("user:pass@host") so credentials cannot mask
-  // the host that is actually being classified.
-  const hostInput = stripEmbeddedUserInfo(hostname);
+  // NFKC-fold compatibility equivalents of authority separators before any
+  // parsing: the URL parser rejects a fullwidth colon ("127.0.0.1：8080") or
+  // fullwidth "@" rather than treating it as a port / userinfo delimiter, so
+  // without this a private host could be classified as public when this
+  // exported helper is called directly with a `host:port` authority.
+  const hostInput = stripEmbeddedUserInfo(hostname.normalize("NFKC"));
   const authorityInput = hostInput.split(/[\\/?#／＼？＃]/)[0] ?? hostInput;
   const raw = authorityInput.trim().toLowerCase().replace(/\.+$/, "");
   const bracketedRaw = /^\[([^\]]+)\](?:\.+)?(?::.*)?$/.exec(raw);

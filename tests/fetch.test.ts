@@ -989,6 +989,23 @@ describe("isNonPublicHostname", () => {
     expect(isNonPublicHostname("10.api.example.com")).toBe(false);
   });
 
+  it("ignores NFKC-equivalent port and userinfo separators on private hosts", () => {
+    // Compatibility characters fold to ASCII separators under NFKC, but the
+    // URL parser rejects them rather than reading them as a port / userinfo
+    // delimiter, so the host must be folded before classification.
+    for (const host of [
+      "127.0.0.1：8080", // fullwidth colon → ":"
+      "１２７.０.０.１：８０８０", // fullwidth digits + fullwidth colon
+      "localhost：80",
+      "user：pass＠127.0.0.1：8080", // fullwidth ":" and "@" → userinfo
+      "[fd12::1]：8080",
+    ]) {
+      expect(isNonPublicHostname(host), host).toBe(true);
+    }
+    // A public host with a fullwidth port separator stays public.
+    expect(isNonPublicHostname("mock.test：8080")).toBe(false);
+  });
+
   it("accepts host:port authorities (Host header / URL.host) and ignores the port", () => {
     // A bare hostname check must not pass "127.0.0.1:3000" off as a DNS name.
     expect(isNonPublicHostname("127.0.0.1:8080")).toBe(true);
