@@ -345,6 +345,11 @@ export function isNonPublicHostname(hostname: string): boolean {
  * anchored pattern would miss.
  */
 export function redactUrlCredentials(url: string): string {
+  // NFKC-fold compatibility variants of authority separators first: the URL
+  // parser rejects a fullwidth "@"/":" in userinfo ("https://user＠h" or
+  // "https://user：pass@h"), so without folding, the raw secret would survive
+  // every pass below and be echoed in the error message. ASCII input is unchanged.
+  const normalized = url.normalize("NFKC");
   // WHATWG URL accepts "https:u:p@h" and backslashes for special schemes too.
   // Only "/" bounds the authority here: "?"/"#" are delimiters inside a password
   // (a parseable URL would end the authority at them), and "\" is a path
@@ -353,11 +358,11 @@ export function redactUrlCredentials(url: string): string {
   // excluding either from the match would abort it and echo the secret instead.
   // A credential-free host with an "@" in its path/query/fragment is at worst
   // over-masked, which is safe for a message.
-  const masked = url.replace(
+  const masked = normalized.replace(
     /^(\s*(?:[a-z][a-z0-9+.-]*:[\/\\]*|[\/\\]+))[^/]*@/i,
     "$1***@",
   );
-  if (masked !== url) return masked;
+  if (masked !== normalized) return masked;
   // A password containing "/" ("https://u:p/ass@h") both aborts the match above
   // (the authority ends at that "/") and makes the URL unparseable (the truncated
   // authority leaves a non-numeric "port"), leaking the echoed credential. When
@@ -365,14 +370,16 @@ export function redactUrlCredentials(url: string): string {
   // not userinfo — so only unparseable input gets this second, broader pass;
   // the "user:pass" ":" requirement keeps a bare path "@" untouched.
   try {
-    new URL(url);
+    new URL(normalized);
   } catch {
-    const broader = url.replace(
+    const broader = normalized.replace(
       /^(\s*(?:[a-z][a-z0-9+.-]*:[\/\\]*|[\/\\]+))[^/\s]*:[^@]*@/i,
       "$1***@",
     );
-    if (broader !== url) return broader;
+    if (broader !== normalized) return broader;
   }
+  // Nothing was masked: echo the caller's original string, not the folded copy,
+  // so unrelated compatibility characters are not rewritten in the message.
   return url;
 }
 

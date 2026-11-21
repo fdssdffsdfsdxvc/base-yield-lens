@@ -1912,6 +1912,23 @@ describe("redactUrlCredentials", () => {
     expect(redactUrlCredentials("not-a-url")).toBe("not-a-url");
   });
 
+  it("masks credentials written with NFKC-compatible separators (fullwidth @ / :)", () => {
+    // The URL parser rejects fullwidth "＠"/"：" in userinfo, so without NFKC
+    // folding the raw password would be echoed verbatim in the error message.
+    const url = "https://user：hunter2＠mock.test/base-defi";
+    expect(redactUrlCredentials(url)).toBe("https://***@mock.test/base-defi");
+
+    let message = "";
+    try {
+      resolveBaseUrl(url);
+    } catch (err) {
+      message = (err as Error).message;
+    }
+    expect(message).toMatch(/^YIELD_LENS_BASE_URL must/);
+    expect(message).not.toContain("hunter2");
+    expect(message).not.toContain("＠");
+  });
+
   it("never echoes embedded passwords in YIELD_LENS_BASE_URL errors", () => {
     const cases: [string, string][] = [
       ["https://user:hunter2@mock.test/base-defi", "hunter2"],
