@@ -19,6 +19,7 @@ permissions:
 jobs:
   check:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       # Pinned to the immutable ref of the tagged version, so a moved/swapped
       # tag cannot introduce arbitrary code into CI.
