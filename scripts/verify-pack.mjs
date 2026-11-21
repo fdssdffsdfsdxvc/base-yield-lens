@@ -100,6 +100,11 @@ try {
       `pack package.json engines.node must be ">=18": ${JSON.stringify(pkg.engines)}`,
     );
   }
+  if (pkg.sideEffects !== false) {
+    throw new Error(
+      `pack package.json sideEffects must be false: ${JSON.stringify(pkg.sideEffects)}`,
+    );
+  }
   const expectedRepo = "git+https://github.com/fdssdffsdfsdxvc/base-yield-lens.git";
   if (pkg.repository?.type !== "git" || pkg.repository?.url !== expectedRepo) {
     throw new Error(
@@ -129,7 +134,7 @@ try {
   console.log(
     "verify-pack: ok —",
     required.join(", "),
-    "+ bin + files + exports + license + engines + prepack + repository metadata",
+    "+ bin + files + exports + license + engines + sideEffects + prepack + repository metadata",
   );
 } finally {
   rmSync(dir, { recursive: true, force: true });
