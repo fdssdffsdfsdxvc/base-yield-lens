@@ -1280,10 +1280,31 @@ describe("isNonPublicHostname", () => {
     expect(() => assertPublicHttpsBaseUrl("https://[2001:2::1]/base-defi")).toThrow(
       /must not target a private host/,
     );
-    // Neighbours of the prefixes stay public.
+    // Neighbours of the prefixes stay public. 2001:1::/32 is special-purpose
+    // too (covered separately below), so only 2001:2:1:: remains public here.
     expect(isNonPublicHostname("[100:0:1::]")).toBe(false);
-    expect(isNonPublicHostname("[2001:1::1]")).toBe(false);
     expect(isNonPublicHostname("[2001:2:1::]")).toBe(false);
+  });
+
+  it("flags IETF protocol-assignment anycast 2001:1::/32 addresses", () => {
+    // 2001:1::1 is the PCP anycast (RFC 7723) and 2001:1::2 the TURN anycast
+    // (RFC 8155); the whole 2001:1::/32 block is IANA special-purpose inside
+    // 2001::/23, so no address in it is a reachable API endpoint.
+    for (const host of [
+      "[2001:1::1]",
+      "2001:1::2",
+      "[2001:1::]:8080",
+      "2001:0001:0:0:0:0:0:1234",
+    ]) {
+      expect(isNonPublicHostname(host), host).toBe(true);
+      const authority = host.startsWith("[") ? host : `[${host}]`;
+      expect(() => assertPublicHttpsBaseUrl(`https://${authority}/base-defi`)).toThrow(
+        /must not target a private host/,
+      );
+    }
+    // Neighbouring /32s stay public (2001:2::/48 is flagged separately above).
+    expect(isNonPublicHostname("[2001:4::1]")).toBe(false);
+    expect(isNonPublicHostname("[2001:5::1]")).toBe(false);
   });
 
   it("flags IPv6 Automatic Multicast Tunneling 2001:3::/32 addresses", () => {

@@ -196,7 +196,7 @@ function canonicalHostname(hostname: string): string {
   }
 }
 
-/** True for localhost / loopback / 0.0.0.0\/8 / RFC1918 / CGNAT / multicast (IPv4 224/4, IPv6 ff00::/8) / reserved 240/4 / IANA special-purpose (192.0.0/24, TEST-NETs, 198.18/15, 192.88.99/24, 192.52.193/24, AS112 192.31.196/24 + 192.175.48/24) / IPv6 documentation prefixes (2001:db8::/32, 3fff::/20) / IPv6 discard-only (100::/64) / IPv6 dummy (100:0:0:1::/64) / IPv6 benchmarking (2001:2::/48) / IPv6 AMT (2001:3::/32) / IPv6 AS112-v6 (2001:4:112::/48) / IPv6 Direct Delegation AS112 (2620:4f:8000::/48) / link-local (fe80::/10) / IPv6 site-local (fec0::/10) / IPv6 ULA (fc00::/7) / .local/.localhost/.internal/home.arpa (RFC 8375). Accepts a bare hostname or a `host:port` authority (port ignored) and an RFC 4007 scoped IPv6 literal (zone id ignored, scope unchanged). */
+/** True for localhost / loopback / 0.0.0.0\/8 / RFC1918 / CGNAT / multicast (IPv4 224/4, IPv6 ff00::/8) / reserved 240/4 / IANA special-purpose (192.0.0/24, TEST-NETs, 198.18/15, 192.88.99/24, 192.52.193/24, AS112 192.31.196/24 + 192.175.48/24) / IPv6 documentation prefixes (2001:db8::/32, 3fff::/20) / IPv6 discard-only (100::/64) / IPv6 dummy (100:0:0:1::/64) / IPv6 benchmarking (2001:2::/48) / IPv6 PCP/TURN anycast (2001:1::/32) / IPv6 AMT (2001:3::/32) / IPv6 AS112-v6 (2001:4:112::/48) / IPv6 Direct Delegation AS112 (2620:4f:8000::/48) / link-local (fe80::/10) / IPv6 site-local (fec0::/10) / IPv6 ULA (fc00::/7) / .local/.localhost/.internal/home.arpa (RFC 8375). Accepts a bare hostname or a `host:port` authority (port ignored) and an RFC 4007 scoped IPv6 literal (zone id ignored, scope unchanged). */
 export function isNonPublicHostname(hostname: string): boolean {
   // Node may keep brackets on IPv6 hostnames ("[fd12::1]").
   const h = canonicalHostname(hostname).replace(/\.+$/, "").replace(/^\[|\]$/g, "");
@@ -277,6 +277,10 @@ export function isNonPublicHostname(hostname: string): boolean {
   // not globally reachable.
   if (v6 && v6[0] === 0x100 && v6[1] === 0 && v6[2] === 0 && v6[3] === 1) return true;
   if (v6 && v6[0] === 0x2001 && v6[1] === 2 && v6[2] === 0) return true;
+  // IETF protocol assignments 2001:1::/32 (inside 2001::/23) hold the PCP
+  // anycast 2001:1::1 (RFC 7723) and TURN anycast 2001:1::2 (RFC 8155); the
+  // whole block is IANA special-purpose and not a reachable API endpoint.
+  if (v6 && v6[0] === 0x2001 && v6[1] === 1) return true;
   // IPv6 Automatic Multicast Tunneling (RFC 7450) 2001:3::/32: IETF protocol
   // assignment inside 2001::/23, not globally reachable.
   if (v6 && v6[0] === 0x2001 && v6[1] === 3) return true;
