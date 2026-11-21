@@ -383,6 +383,9 @@ export function assertPublicHttpsBaseUrl(url: string): void {
   if (/[\u0000-\u001f\u007f-\u009f\u2028\u2029]/.test(url)) {
     throw new Error(`YIELD_LENS_BASE_URL must not include control characters: ${shown}`);
   }
+  if (url.includes("\\")) {
+    throw new Error(`YIELD_LENS_BASE_URL must not include backslashes: ${shown}`);
+  }
   let parsed: URL;
   try {
     parsed = new URL(url);

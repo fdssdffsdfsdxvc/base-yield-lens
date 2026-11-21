@@ -895,6 +895,21 @@ describe("assertPublicHttpsBaseUrl", () => {
     expect(() => resolveBaseUrl("https://mock.test/base-defi")).not.toThrow();
   });
 
+  it("rejects backslashes (WHATWG URL normalizes them to slashes)", () => {
+    for (const u of [
+      "https://mock.test/base\\defi",
+      "https://mock.test/base\\..\\admin",
+      "https://mock.test\\base-defi",
+    ]) {
+      expect(() => assertPublicHttpsBaseUrl(u), u).toThrow(/must not include backslashes/);
+      expect(() => resolveBaseUrl(u), u).toThrow(/must not include backslashes/);
+    }
+    // Trailing backslashes are stripped by resolveBaseUrl before validation.
+    expect(resolveBaseUrl("https://mock.test/base-defi\\")).toBe(
+      "https://mock.test/base-defi",
+    );
+  });
+
   it("rejects a bare trailing ? or # (empty query/hash still breaks path join)", () => {
     // new URL(...).search/hash are "" here, but `${base}/pools` would become
     // "https://mock.test/base-defi?/pools" (query) or "#/pools" (dropped fragment).
