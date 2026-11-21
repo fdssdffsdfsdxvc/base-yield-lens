@@ -60,18 +60,18 @@ unparseable and slip past the checks); query strings and hashes are rejected, in
 trailing `?` or `#` (they would break `/pools` and `/lending` path joining); otherwise the CLI exits
 with a clear error. Error messages mask any embedded `user:pass@` as `***@` (even when a `?`, `#`,
 `/`, or `\` delimiter sits inside a malformed password, which would otherwise abort the match and
-print the raw, unparseable URL; for `/` — the one delimiter that really does bound the authority —
-the mask falls back to a broader pass scoped to unparseable URLs only, so a path `@` in a parseable
-URL is never over-masked) so secrets are not echoed to stderr/logs (also applied to `fetchJson` HTTP
-error messages, since it is exported, and to fetch-level failures such as undici's
-`Failed to parse URL from <input>`, which embeds the raw input and is reported as a generic masked
-`Request to <url> failed` line, keeping only a secret-free Node errno code like `ECONNREFUSED` for
-debugging; the same masked `Request to <url> failed` line is emitted for failures raised while
-streaming the response body, e.g. undici's `terminated` mid-read). Since these errors echo the untrusted argv flag or
-`YIELD_LENS_BASE_URL` value, all CLI stderr output also replaces control characters (ANSI escapes,
-C0/CR/LF/BEL, DEL, C1, Unicode line/paragraph separators, bidi overrides) with spaces, the same
-neutralization used on API labels, so an attacker-crafted argv or env value cannot rewrite terminal
-colors or forge extra error lines.
+print the raw, unparseable URL; for a parseable URL the plain pass stops at `/`, `?` or `#`, so an
+`@` in its path/query/fragment is not mistaken for userinfo and the host stays in the message, while
+the broader fallback pass is scoped to unparseable URLs only) so secrets are not echoed to
+stderr/logs (also applied to `fetchJson` HTTP error messages, since it is exported, and to
+fetch-level failures such as undici's `Failed to parse URL from <input>`, which embeds the raw input
+and is reported as a generic masked `Request to <url> failed` line, keeping only a secret-free Node
+errno code like `ECONNREFUSED` for debugging; the same masked `Request to <url> failed` line is emitted
+for failures raised while streaming the response body, e.g. undici's `terminated` mid-read). Since
+these errors echo the untrusted argv flag or `YIELD_LENS_BASE_URL` value, all CLI stderr output also
+replaces control characters (ANSI escapes, C0/CR/LF/BEL, DEL, C1, Unicode line/paragraph separators,
+bidi overrides) with spaces, the same neutralization used on API labels, so an attacker-crafted argv
+or env value cannot rewrite terminal colors or forge extra error lines.
 
 When the API is unreachable, hangs past the per-request timeout (10 s, `DEFAULT_FETCH_TIMEOUT_MS`;
 override via `summarizeYields({ timeoutMs })`, and a negative/non-finite/fractional override falls

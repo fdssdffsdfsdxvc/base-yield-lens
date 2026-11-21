@@ -1925,6 +1925,24 @@ describe("redactUrlCredentials", () => {
     expect(redactUrlCredentials("not-a-url")).toBe("not-a-url");
   });
 
+  it("does not over-mask an '@' in a parseable path/query/fragment", () => {
+    // An "@" after "/", "?" or "#" belongs to that part, not userinfo: masking
+    // through it would drop the host and leave a misleading error message.
+    expect(redactUrlCredentials("https://u:p@mock.test/x?q=a@b")).toBe(
+      "https://***@mock.test/x?q=a@b",
+    );
+    expect(redactUrlCredentials("https://u:p@mock.test#frag@x")).toBe(
+      "https://***@mock.test#frag@x",
+    );
+    // Credential-free URLs keep their host even when the query/fragment has an @.
+    expect(redactUrlCredentials("https://mock.test?q=a@b")).toBe(
+      "https://mock.test?q=a@b",
+    );
+    expect(redactUrlCredentials("https://mock.test#frag@x")).toBe(
+      "https://mock.test#frag@x",
+    );
+  });
+
   it("masks credentials written with NFKC-compatible separators (fullwidth @ / :)", () => {
     // The URL parser rejects fullwidth "＠"/"：" in userinfo, so without NFKC
     // folding the raw password would be echoed verbatim in the error message.

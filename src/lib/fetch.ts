@@ -351,15 +351,15 @@ export function redactUrlCredentials(url: string): string {
   // every pass below and be echoed in the error message. ASCII input is unchanged.
   const normalized = url.normalize("NFKC");
   // WHATWG URL accepts "https:u:p@h" and backslashes for special schemes too.
-  // Only "/" bounds the authority here: "?"/"#" are delimiters inside a password
-  // (a parseable URL would end the authority at them), and "\" is a path
-  // separator for special schemes, so a password containing one puts the whole
-  // userinfo outside the parsed authority and makes the raw URL unparseable —
-  // excluding either from the match would abort it and echo the secret instead.
-  // A credential-free host with an "@" in its path/query/fragment is at worst
-  // over-masked, which is safe for a message.
+  // Bound the authority at "/", "?" and "#": an "@" after any of them belongs to
+  // the path/query/fragment, not userinfo, so masking through it would drop the
+  // host from the message (e.g. "https://u:p@h#f@x" -> "https://***@x"). A
+  // password containing "?"/"#" (or "\" — a path separator for special schemes)
+  // puts the userinfo outside the parsed authority and makes the URL
+  // unparseable, so it is still masked by the broader fallback pass below, which
+  // does not bound at these delimiters; the secret is never echoed either way.
   const masked = normalized.replace(
-    /^(\s*(?:[a-z][a-z0-9+.-]*:[\/\\]*|[\/\\]+))[^/]*@/i,
+    /^(\s*(?:[a-z][a-z0-9+.-]*:[\/\\]*|[\/\\]+))[^/?#]*@/i,
     "$1***@",
   );
   if (masked !== normalized) return masked;
