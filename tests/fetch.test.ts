@@ -259,6 +259,19 @@ describe("summarizeYields", () => {
 });
 
 describe("fetchJson", () => {
+  it("issues a bodyless GET that asks the endpoint for JSON", async () => {
+    let init: RequestInit | undefined;
+    const fetchImpl = vi.fn(async (_input: RequestInfo | URL, i?: RequestInit) => {
+      init = i;
+      return new Response("[]", { status: 200 });
+    }) as unknown as typeof fetch;
+
+    await expect(fetchJson("https://mock.test/pools", fetchImpl)).resolves.toEqual([]);
+    expect(init?.method).toBeUndefined();
+    expect(init?.body).toBeUndefined();
+    expect(init?.headers).toEqual({ accept: "application/json" });
+  });
+
   it("throws a clear HTTP error for non-OK responses", async () => {
     const fetchImpl = vi.fn(
       async () => new Response("nope", { status: 404 }),
