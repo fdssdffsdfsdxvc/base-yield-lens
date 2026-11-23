@@ -434,7 +434,7 @@ export function resolveBaseUrl(baseUrl?: string): string {
   const stripped = trimmed.replace(/[\\/]+$/, "");
   if (!stripped) return DEFAULT_BASE;
   assertPublicHttpsBaseUrl(stripped);
-  return stripped;
+  return new URL(stripped).href.replace(/\/+$/, "");
 }
 
 function asArray(value: unknown): unknown[] {

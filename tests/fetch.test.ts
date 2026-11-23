@@ -717,6 +717,22 @@ describe("resolveBaseUrl", () => {
     );
   });
 
+  it("canonicalizes the base URL so path normalization cannot bypass prefix joins", async () => {
+    const base = "https://mock.test/base-defi/../secret";
+    expect(resolveBaseUrl(base)).toBe("https://mock.test/secret");
+
+    const urls: string[] = [];
+    const fetchImpl = vi.fn(async (input: RequestInfo | URL) => {
+      urls.push(String(input));
+      return new Response("[]", { status: 200 });
+    }) as unknown as typeof fetch;
+    await summarizeYields({ baseUrl: base, fetchImpl });
+    expect(urls).toEqual([
+      "https://mock.test/secret/pools",
+      "https://mock.test/secret/lending",
+    ]);
+  });
+
   it("strips trailing backslashes, which WHATWG treats as slashes", async () => {
     expect(resolveBaseUrl("https://mock.test/base-defi\\")).toBe(
       "https://mock.test/base-defi",
