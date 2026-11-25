@@ -1,11 +1,19 @@
 #!/usr/bin/env node
+import { createRequire } from "node:module";
 import { CLI_USAGE, neutralizeUnsafeCliChars, parseCliArgs } from "./cliArgs.js";
 import { formatSummary, summarizeYields } from "./lib/fetch.js";
 
+const require = createRequire(import.meta.url);
+const { version: pkgVersion } = require("../package.json") as { version: string };
+
 async function main() {
-  const { help } = parseCliArgs(process.argv.slice(2));
+  const { help, version } = parseCliArgs(process.argv.slice(2));
   if (help) {
     console.log(CLI_USAGE.trimEnd());
+    return;
+  }
+  if (version) {
+    console.log(pkgVersion);
     return;
   }
 

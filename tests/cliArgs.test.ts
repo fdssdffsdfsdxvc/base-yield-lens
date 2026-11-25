@@ -17,12 +17,17 @@ describe("neutralizeUnsafeCliChars", () => {
 
 describe("parseCliArgs", () => {
   it("accepts empty argv (run summary)", () => {
-    expect(parseCliArgs([])).toEqual({ help: false });
+    expect(parseCliArgs([])).toEqual({ help: false, version: false });
   });
 
   it("treats --help and -h as help", () => {
-    expect(parseCliArgs(["--help"])).toEqual({ help: true });
-    expect(parseCliArgs(["-h"])).toEqual({ help: true });
+    expect(parseCliArgs(["--help"])).toEqual({ help: true, version: false });
+    expect(parseCliArgs(["-h"])).toEqual({ help: true, version: false });
+  });
+
+  it("treats --version and -v as version", () => {
+    expect(parseCliArgs(["--version"])).toEqual({ help: false, version: true });
+    expect(parseCliArgs(["-v"])).toEqual({ help: false, version: true });
   });
 
   it("rejects unknown flags with a clear error", () => {
@@ -32,9 +37,10 @@ describe("parseCliArgs", () => {
   });
 
   it("ignores a bare -- end-of-options marker (pnpm cli -- --help)", () => {
-    expect(parseCliArgs(["--"])).toEqual({ help: false });
-    expect(parseCliArgs(["--", "--help"])).toEqual({ help: true });
-    expect(parseCliArgs(["--help", "--"])).toEqual({ help: true });
+    expect(parseCliArgs(["--"])).toEqual({ help: false, version: false });
+    expect(parseCliArgs(["--", "--help"])).toEqual({ help: true, version: false });
+    expect(parseCliArgs(["--help", "--"])).toEqual({ help: true, version: false });
+    expect(parseCliArgs(["--", "--version"])).toEqual({ help: false, version: true });
     expect(() => parseCliArgs(["--", "--json"])).toThrow(/Unknown argument: --json/);
   });
 
@@ -50,6 +56,7 @@ describe("CLI_USAGE", () => {
     expect(CLI_USAGE).toContain("base-yield-lens");
     expect(CLI_USAGE).toContain("YIELD_LENS_BASE_URL");
     expect(CLI_USAGE).toContain("--help");
+    expect(CLI_USAGE).toContain("--version");
   });
 });
 
@@ -89,5 +96,14 @@ describe("CLI stderr hardening (end-to-end)", () => {
       expect(stderr).toMatch(/YIELD_LENS_BASE_URL must /);
       expect(stderr).not.toMatch(/[\u0000-\u001f\u007f-\u009f\u2028\u2029\u202a-\u202e\u2066-\u2069]/);
     }
+  });
+
+  it("prints the package version with --version", () => {
+    const stdout = execFileSync("node_modules/.bin/tsx", ["src/cli.ts", "--version"], {
+      cwd: new URL("..", import.meta.url).pathname,
+      env: process.env,
+      stdio: ["ignore", "pipe", "pipe"],
+    }).toString("utf8");
+    expect(stdout.trim()).toMatch(/^\d+\.\d+\.\d+/);
   });
 });

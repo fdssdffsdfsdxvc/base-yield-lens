@@ -2,7 +2,7 @@
 export const CLI_USAGE = `base-yield-lens — read-only Base DeFi yield summary
 
 Usage:
-  base-yield-lens [--help|-h]
+  base-yield-lens [--help|-h] [--version|-v]
 
 Env:
   YIELD_LENS_BASE_URL  Optional https API root (blank → built-in placeholder).
@@ -12,7 +12,7 @@ Env:
 Not financial advice. Placeholder APIs until real Base endpoints are wired.
 `;
 
-export type ParsedCliArgs = { help: boolean };
+export type ParsedCliArgs = { help: boolean; version: boolean };
 
 /**
  * C0/DEL/C1 controls (ANSI escapes, CR/LF, BEL) plus Unicode line/paragraph
@@ -35,6 +35,7 @@ export function neutralizeUnsafeCliChars(message: string): string {
 /** Parse argv after node/script (e.g. process.argv.slice(2)). */
 export function parseCliArgs(argv: string[]): ParsedCliArgs {
   let help = false;
+  let version = false;
   for (const arg of argv) {
     // `pnpm cli -- --help` forwards the bare "--" end-of-options marker; skip it.
     if (arg === "--") continue;
@@ -45,7 +46,11 @@ export function parseCliArgs(argv: string[]): ParsedCliArgs {
       help = true;
       continue;
     }
+    if (arg === "--version" || arg === "-v") {
+      version = true;
+      continue;
+    }
     throw new Error(`Unknown argument: ${arg}\nUse --help for usage.`);
   }
-  return { help };
+  return { help, version };
 }
