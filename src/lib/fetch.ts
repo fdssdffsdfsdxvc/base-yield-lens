@@ -663,6 +663,8 @@ export async function fetchJson<T>(
   if (text.length > MAX_RESPONSE_BYTES) {
     throw new Error(tooLarge);
   }
+  // Some servers prepend a UTF-8 BOM; JSON.parse rejects it, so strip it.
+  if (text.charCodeAt(0) === 0xfeff) text = text.slice(1);
   try {
     return JSON.parse(text) as T;
   } catch {

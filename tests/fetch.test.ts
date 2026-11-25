@@ -373,6 +373,20 @@ describe("fetchJson", () => {
     ).resolves.toEqual({ ok: true, n: 42 });
   });
 
+  it("accepts a UTF-8 BOM-prefixed JSON body", async () => {
+    const fetchImpl = vi.fn(
+      async () =>
+        new Response("\uFEFF" + JSON.stringify({ ok: true }), {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        }),
+    ) as unknown as typeof fetch;
+
+    await expect(fetchJson("https://mock.test/bom", fetchImpl)).resolves.toEqual({
+      ok: true,
+    });
+  });
+
   it("throws a clear error when an OK response has no body (e.g. 204)", async () => {
     const fetchImpl = vi.fn(
       async () =>
