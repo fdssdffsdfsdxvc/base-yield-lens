@@ -713,8 +713,14 @@ export function formatSummary(s: YieldLensSummary): string {
   // Cap rendered rows as well as fetched rows: normalizePools/normalizeLending
   // cap at MAX_SUMMARY_ROWS, but formatSummary is exported and may be called
   // with a caller-built summary — an unbounded array would flood stdout/logs.
-  const pools = (Array.isArray(s0.pools) ? s0.pools : []).slice(0, MAX_SUMMARY_ROWS);
-  const lending = (Array.isArray(s0.lending) ? s0.lending : []).slice(0, MAX_SUMMARY_ROWS);
+  // Drop null/non-object/array elements (same guard as normalize*) so caller-
+  // built summaries cannot render junk "?" rows or crash on malformed entries.
+  const pools = (Array.isArray(s0.pools) ? s0.pools : [])
+    .filter(isRecord)
+    .slice(0, MAX_SUMMARY_ROWS);
+  const lending = (Array.isArray(s0.lending) ? s0.lending : [])
+    .filter(isRecord)
+    .slice(0, MAX_SUMMARY_ROWS);
   const lines = [
     `Base yield lens @ ${fetchedAt}`,
     `Pools: ${pools.length}`,

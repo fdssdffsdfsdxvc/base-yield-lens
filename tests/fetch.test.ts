@@ -578,6 +578,36 @@ describe("formatSummary", () => {
     expect(text).not.toContain("Infinity");
   });
 
+  it("drops null/non-object elements in caller-built summaries (no crash/junk rows)", () => {
+    const text = formatSummary({
+      chain: "base",
+      pools: [
+        null as unknown as any,
+        42 as unknown as any,
+        ["nested"] as unknown as any,
+        {
+          protocol: "aerodrome",
+          poolId: "0xok",
+          symbol: "WETH/USDC",
+          tvlUsd: 10,
+          aprPct: 1,
+          asOf: "2026-09-27T00:00:00.000Z",
+        },
+      ],
+      lending: [
+        undefined as unknown as any,
+        { protocol: "aave-v3", market: "USDC", supplyApyPct: 3, borrowApyPct: 4, asOf: "t" },
+        null as unknown as any,
+      ],
+      fetchedAt: "2026-09-27T08:00:00.000Z",
+    });
+    expect(text).toContain("Pools: 1");
+    expect(text).toContain("Lending: 1");
+    expect(text).toContain("WETH/USDC");
+    expect(text).toContain("[aave-v3] USDC");
+    expect(text).not.toContain("[?] ? TVL=$?");
+  });
+
   it("tolerates missing pools/lending arrays at runtime", () => {
     const text = formatSummary({
       chain: "base",
@@ -607,7 +637,7 @@ describe("formatSummary", () => {
     ).toBe(empty);
   });
 
-  it("tolerates null/undefined elements in pools/lending arrays at runtime", () => {
+  it("drops null/undefined elements in pools/lending arrays at runtime", () => {
     const text = formatSummary({
       chain: "base",
       pools: [null, undefined],
@@ -618,11 +648,8 @@ describe("formatSummary", () => {
     expect(text).toBe(
       [
         "Base yield lens @ 2026-09-27T08:00:00.000Z",
-        "Pools: 2",
-        "  - [?] ? TVL=$? APR=?%",
-        "  - [?] ? TVL=$? APR=?%",
-        "Lending: 1",
-        "  - [?] ? supply=?% borrow=?%",
+        "Pools: 0",
+        "Lending: 0",
       ].join("\n"),
     );
   });
