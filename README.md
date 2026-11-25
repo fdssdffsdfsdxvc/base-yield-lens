@@ -33,7 +33,7 @@ After `pnpm build`, the package bin is available as `base-yield-lens` (points at
 Optional: `YIELD_LENS_BASE_URL=https://your-api.example/base-defi`
 
 Blank or whitespace-only `YIELD_LENS_BASE_URL` falls back to the built-in placeholder base. Trailing
-slashes on the base URL are stripped so `/pools` and `/lending` paths do not double. Non-blank
+slashes or backslashes on the base URL are stripped so `/pools` and `/lending` paths do not double. Non-blank
 values must be absolute **https** URLs with a host and without embedded credentials (`user:pass@`);
 localhost / `.localhost` / `.internal` / `home.arpa` (RFC 8375 special-use domain for home networks)
 / private-network / 0.0.0.0/8 / multicast/broadcast/reserved (IPv4 224–255/4 including limited
