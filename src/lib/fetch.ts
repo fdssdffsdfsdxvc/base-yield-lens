@@ -484,12 +484,13 @@ export function fmtLabel(value: unknown): string {
 const DECIMAL_STRING = /^[+-]?(?:\d+\.?\d*|\.\d+)(?:e[+-]?\d+)?$/i;
 
 /**
- * Coerce metrics for display. Numbers pass through (NaN/±Infinity → "?" via fmtNum).
- * Non-empty decimal strings are accepted; hex/octal/binary strings (Number("0x10")
- * === 16, e.g. raw on-chain quantities), booleans/arrays/objects/blank → NaN.
+ * Coerce metrics for display. Finite numbers pass through; NaN/±Infinity → NaN
+ * (rendered as "?" by fmtNum). Non-empty decimal strings are accepted;
+ * hex/octal/binary strings (Number("0x10") === 16, e.g. raw on-chain quantities),
+ * booleans/arrays/objects/blank → NaN.
  */
 function asNumber(value: unknown): number {
-  if (typeof value === "number") return value;
+  if (typeof value === "number") return Number.isFinite(value) ? value : Number.NaN;
   if (typeof value === "string" && DECIMAL_STRING.test(value.trim())) {
     const n = Number(value);
     return Number.isFinite(n) ? n : Number.NaN;

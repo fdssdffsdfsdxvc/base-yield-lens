@@ -1812,6 +1812,49 @@ describe("normalizePools / normalizeLending", () => {
     expect(formatSummary(s)).toContain("[x] A TVL=$? APR=?%");
   });
 
+  it("coerces non-finite numeric metrics to NaN→?", async () => {
+    const fetchImpl = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      const body = url.endsWith("/pools")
+        ? [
+            {
+              protocol: "aerodrome",
+              poolId: "0x1",
+              symbol: "WETH/USDC",
+              tvlUsd: Number.POSITIVE_INFINITY,
+              aprPct: Number.NEGATIVE_INFINITY,
+              asOf: "t",
+            },
+          ]
+        : [
+            {
+              protocol: "aave-v3",
+              market: "USDC",
+              supplyApyPct: Number.NaN,
+              borrowApyPct: Number.POSITIVE_INFINITY,
+              asOf: "t",
+            },
+          ];
+      return new Response(JSON.stringify(body), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      });
+    }) as unknown as typeof fetch;
+
+    const summary = await summarizeYields({
+      baseUrl: "https://mock.test/base-defi",
+      fetchImpl,
+    });
+
+    expect(Number.isNaN(summary.pools[0]!.tvlUsd)).toBe(true);
+    expect(Number.isNaN(summary.pools[0]!.aprPct)).toBe(true);
+    expect(Number.isNaN(summary.lending[0]!.supplyApyPct)).toBe(true);
+    expect(Number.isNaN(summary.lending[0]!.borrowApyPct)).toBe(true);
+    const text = formatSummary(summary);
+    expect(text).toContain("TVL=$? APR=?%");
+    expect(text).toContain("supply=?% borrow=?%");
+  });
+
   it("coerces missing/blank/non-string labels to ?; non-numeric metrics to NaN→?", async () => {
     const fetchImpl = vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input);
