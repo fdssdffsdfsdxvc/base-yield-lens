@@ -609,6 +609,8 @@ export async function fetchJson<T>(
       // This client is read-only and unauthenticated; never attach ambient
       // browser credentials to untrusted, user-configurable endpoints.
       credentials: "omit",
+      // Yield snapshots are time-sensitive; bypass any HTTP cache.
+      cache: "no-store",
     });
   } catch (err) {
     // undici throws TypeError("Failed to parse URL from <input>") with the raw
