@@ -437,6 +437,22 @@ describe("fetchJson", () => {
     );
   });
 
+  it("does not trust non-numeric content-length; falls back to streamed byte counting", async () => {
+    const fetchImpl = vi.fn(
+      async () =>
+        new Response("x".repeat(MAX_RESPONSE_BYTES + 1), {
+          status: 200,
+          headers: { "content-length": "abc" },
+        }),
+    ) as unknown as typeof fetch;
+
+    await expect(
+      fetchJson("https://mock.test/big", fetchImpl),
+    ).rejects.toThrow(
+      `HTTP body exceeds ${MAX_RESPONSE_BYTES} bytes for https://mock.test/big`,
+    );
+  });
+
   it("cancels the unconsumed body on non-OK and oversize-by-content-length responses", async () => {
     // An unconsumed Response body keeps the underlying connection until GC;
     // fetchJson must cancel it explicitly when it never streams the body.

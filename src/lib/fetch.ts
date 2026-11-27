@@ -623,7 +623,9 @@ export async function fetchJson<T>(
     throw new Error(`HTTP ${res.status} for ${redactUrlCredentials(url)}`);
   }
   const tooLarge = `HTTP body exceeds ${MAX_RESPONSE_BYTES} bytes for ${redactUrlCredentials(url)}`;
-  const declared = Number.parseInt(res.headers.get("content-length") ?? "", 10);
+  const rawLen = res.headers.get("content-length");
+  const declared =
+    rawLen !== null && /^\d+$/.test(rawLen.trim()) ? Number(rawLen.trim()) : Number.NaN;
   if (Number.isFinite(declared) && declared > MAX_RESPONSE_BYTES) {
     await res.body?.cancel().catch(() => {});
     throw new Error(tooLarge);
