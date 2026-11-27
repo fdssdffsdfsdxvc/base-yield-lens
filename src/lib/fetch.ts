@@ -606,6 +606,9 @@ export async function fetchJson<T>(
       // Following redirects would bypass assertPublicHttpsBaseUrl (a public https
       // root could 30x to http:// or a private/metadata host). Treat as failure.
       redirect: "error",
+      // This client is read-only and unauthenticated; never attach ambient
+      // browser credentials to untrusted, user-configurable endpoints.
+      credentials: "omit",
     });
   } catch (err) {
     // undici throws TypeError("Failed to parse URL from <input>") with the raw

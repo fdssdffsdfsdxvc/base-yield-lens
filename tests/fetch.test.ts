@@ -259,7 +259,7 @@ describe("summarizeYields", () => {
 });
 
 describe("fetchJson", () => {
-  it("issues a bodyless GET that asks the endpoint for JSON", async () => {
+  it("issues a bodyless GET that asks the endpoint for JSON without ambient credentials", async () => {
     let init: RequestInit | undefined;
     const fetchImpl = vi.fn(async (_input: RequestInfo | URL, i?: RequestInit) => {
       init = i;
@@ -270,6 +270,7 @@ describe("fetchJson", () => {
     expect(init?.method).toBeUndefined();
     expect(init?.body).toBeUndefined();
     expect(init?.headers).toEqual({ accept: "application/json" });
+    expect(init?.credentials).toBe("omit");
   });
 
   it("throws a clear HTTP error for non-OK responses", async () => {
