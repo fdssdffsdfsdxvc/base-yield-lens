@@ -435,6 +435,21 @@ describe("fetchJson", () => {
     expect(message).not.toContain("hunter2");
   });
 
+  it("treats a BOM-prefixed whitespace-only body as empty", async () => {
+    const fetchImpl = vi.fn(
+      async () => new Response("\uFEFF \n\t  ", { status: 200 }),
+    ) as unknown as typeof fetch;
+
+    let message = "";
+    try {
+      await fetchJson("https://user:hunter2@mock.test/bom-blank", fetchImpl);
+    } catch (err) {
+      message = (err as Error).message;
+    }
+    expect(message).toBe("Empty response body from https://***@mock.test/bom-blank");
+    expect(message).not.toContain("hunter2");
+  });
+
   it("throws a clear, credential-masked error for malformed JSON", async () => {
     const fetchImpl = vi.fn(
       async () =>
