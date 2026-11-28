@@ -417,7 +417,22 @@ describe("fetchJson", () => {
 
     await expect(
       fetchJson("https://mock.test/empty", fetchImpl),
-    ).rejects.toThrow("Invalid JSON in response from https://mock.test/empty");
+    ).rejects.toThrow("Empty response body from https://mock.test/empty");
+  });
+
+  it("throws a clear, credential-masked error for whitespace-only bodies", async () => {
+    const fetchImpl = vi.fn(
+      async () => new Response(" \n\t  ", { status: 200 }),
+    ) as unknown as typeof fetch;
+
+    let message = "";
+    try {
+      await fetchJson("https://user:hunter2@mock.test/blank", fetchImpl);
+    } catch (err) {
+      message = (err as Error).message;
+    }
+    expect(message).toBe("Empty response body from https://***@mock.test/blank");
+    expect(message).not.toContain("hunter2");
   });
 
   it("throws a clear, credential-masked error for malformed JSON", async () => {

@@ -679,6 +679,9 @@ export async function fetchJson<T>(
   }
   // Some servers prepend a UTF-8 BOM; JSON.parse rejects it, so strip it.
   if (text.charCodeAt(0) === 0xfeff) text = text.slice(1);
+  if (text.trim() === "") {
+    throw new Error(`Empty response body from ${redactUrlCredentials(url)}`);
+  }
   try {
     return JSON.parse(text) as T;
   } catch {
