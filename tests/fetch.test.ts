@@ -332,6 +332,23 @@ describe("fetchJson", () => {
     ).rejects.toThrow("Request to https://mock.test/refused failed (ECONNREFUSED)");
   });
 
+  it("reports fetch timeouts as a masked timeout failure", async () => {
+    const fetchImpl = vi.fn(async () => {
+      const err = new Error("The operation was aborted due to timeout");
+      err.name = "TimeoutError";
+      throw err;
+    }) as unknown as typeof fetch;
+
+    let message = "";
+    try {
+      await fetchJson("https://user:secret@mock.test/slow", fetchImpl);
+    } catch (err) {
+      message = (err as Error).message;
+    }
+    expect(message).toBe("Request to https://***@mock.test/slow failed (timeout)");
+    expect(message).not.toContain("secret");
+  });
+
   it("masks credentials when the body stream fails mid-read", async () => {
     // A stream error surfacing while the body is read (e.g. undici "terminated")
     // must not echo a URL-embedded secret either.

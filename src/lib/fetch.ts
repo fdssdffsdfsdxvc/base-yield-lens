@@ -564,8 +564,8 @@ export const MAX_RESPONSE_BYTES = 2_000_000;
 /**
  * Build one plain masked line for a failed request. undici embeds the raw
  * input URL (with any userinfo) in some error messages, so the URL must go
- * through redactUrlCredentials; a Node system errno (ECONNREFUSED, ...)
- * carries no secrets and is kept for debuggability.
+ * through redactUrlCredentials; a Node system errno (ECONNREFUSED, ...) or a
+ * timeout carries no secrets and is kept for debuggability.
  */
 function requestFailedError(url: string, err: unknown): Error {
   const cause = (err as { cause?: unknown } | null)?.cause;
@@ -575,8 +575,12 @@ function requestFailedError(url: string, err: unknown): Error {
       : typeof (err as { code?: unknown } | null)?.code === "string"
         ? (err as { code: string }).code
         : "";
+  const timedOut =
+    (err as { name?: unknown } | null)?.name === "TimeoutError" ||
+    (cause as { name?: unknown } | null)?.name === "TimeoutError";
+  const detail = code || (timedOut ? "timeout" : "");
   return new Error(
-    `Request to ${redactUrlCredentials(url)} failed${code ? ` (${code})` : ""}`,
+    `Request to ${redactUrlCredentials(url)} failed${detail ? ` (${detail})` : ""}`,
   );
 }
 
