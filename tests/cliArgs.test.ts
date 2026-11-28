@@ -1,6 +1,11 @@
 import { execFileSync } from "node:child_process";
 import { describe, expect, it } from "vitest";
-import { CLI_USAGE, neutralizeUnsafeCliChars, parseCliArgs } from "../src/cliArgs.js";
+import {
+  CLI_USAGE,
+  MAX_CLI_ERROR_LENGTH,
+  neutralizeUnsafeCliChars,
+  parseCliArgs,
+} from "../src/cliArgs.js";
 
 describe("neutralizeUnsafeCliChars", () => {
   it("replaces terminal control characters with spaces", () => {
@@ -12,6 +17,29 @@ describe("neutralizeUnsafeCliChars", () => {
       "aerodrome line break",
     );
     expect(neutralizeUnsafeCliChars("plain message")).toBe("plain message");
+  });
+
+  it("caps oversized untrusted error messages to avoid flooding stderr", () => {
+    expect(MAX_CLI_ERROR_LENGTH).toBeGreaterThan(0);
+    const long = "E".repeat(MAX_CLI_ERROR_LENGTH + 50);
+    const capped = neutralizeUnsafeCliChars(long);
+    expect(capped).toHaveLength(MAX_CLI_ERROR_LENGTH);
+    expect(capped.endsWith("…")).toBe(true);
+    expect(neutralizeUnsafeCliChars("E".repeat(MAX_CLI_ERROR_LENGTH))).toHaveLength(
+      MAX_CLI_ERROR_LENGTH,
+    );
+  });
+
+  it("never truncates capped error messages mid-surrogate-pair", () => {
+    const capped = neutralizeUnsafeCliChars("😀".repeat(MAX_CLI_ERROR_LENGTH));
+    expect(capped.length).toBeLessThanOrEqual(MAX_CLI_ERROR_LENGTH);
+    expect(capped.endsWith("…")).toBe(true);
+    expect(
+      Array.from(capped).some((cp) => {
+        const n = cp.codePointAt(0)!;
+        return n >= 0xd800 && n <= 0xdfff;
+      }),
+    ).toBe(false);
   });
 });
 
