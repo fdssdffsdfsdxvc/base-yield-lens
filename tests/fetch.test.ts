@@ -259,7 +259,7 @@ describe("summarizeYields", () => {
 });
 
 describe("fetchJson", () => {
-  it("issues a bodyless GET that asks the endpoint for JSON without ambient credentials or cache", async () => {
+  it("issues a bodyless GET that asks the endpoint for JSON without ambient credentials, cache, or referrer leakage", async () => {
     let init: RequestInit | undefined;
     const fetchImpl = vi.fn(async (_input: RequestInfo | URL, i?: RequestInit) => {
       init = i;
@@ -272,6 +272,7 @@ describe("fetchJson", () => {
     expect(init?.headers).toEqual({ accept: "application/json" });
     expect(init?.credentials).toBe("omit");
     expect(init?.cache).toBe("no-store");
+    expect(init?.referrerPolicy).toBe("no-referrer");
   });
 
   it("throws a clear HTTP error for non-OK responses", async () => {

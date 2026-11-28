@@ -611,6 +611,8 @@ export async function fetchJson<T>(
       credentials: "omit",
       // Yield snapshots are time-sensitive; bypass any HTTP cache.
       cache: "no-store",
+      // Avoid leaking the full request URL as a Referer to untrusted endpoints.
+      referrerPolicy: "no-referrer",
     });
   } catch (err) {
     // undici throws TypeError("Failed to parse URL from <input>") with the raw
